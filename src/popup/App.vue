@@ -5,13 +5,10 @@
 
       <v-divider />
 
-      <image-pie-chart
-        :chartData="datacollection"
-        :options="{ cutoutPercentage: 0 }"
-      />
+      <image-pie-chart :chartData="chartData" />
 
       <v-card-actions>
-        <v-btn depressed color="primary">テスト</v-btn>
+        <v-btn depressed color="primary" @click="onClick">テスト</v-btn>
       </v-card-actions>
     </v-card>
   </v-app>
@@ -19,27 +16,30 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import ImagePieChart from '@/components/ImagePieChart.vue'
+import ImagePieChart, { ImageChartData } from '@/components/ImagePieChart.vue'
+import { Runtime } from 'webextension-polyfill-ts'
 
 @Component({
-  components: {
-    ImagePieChart,
-  },
+  components: { ImagePieChart },
 })
 export default class App extends Vue {
-  datacollection = {
-    labels: [this.getRandomInt(), this.getRandomInt()],
-    datasets: [
-      {
-        label: 'Data One',
-        backgroundColor: ['#087979', '#887979', '#f87979'],
-        data: [this.getRandomInt(), this.getRandomInt(), this.getRandomInt()],
-      },
-    ],
+  chartData: ImageChartData | null = null
+  port: Runtime.Port | null = null
+
+  onClick() {
+    this.port?.postMessage(Date.now())
   }
 
-  getRandomInt() {
-    return Math.floor(Math.random() * (50 - 5 + 1)) + 5
+  mounted() {
+    this.port = this.$browser.runtime.connect()
+    this.port.onMessage.addListener((message) => {
+      this.chartData = {
+        labels: message.map((m) => m.name),
+        series: message.map((m) => m.count),
+        images: message.map((m) => m.src),
+      }
+      console.log(this.chartData)
+    })
   }
 }
 </script>

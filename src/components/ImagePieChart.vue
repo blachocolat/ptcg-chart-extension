@@ -5,29 +5,37 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator'
+import { Component, Vue, Prop, Watch } from 'vue-property-decorator'
 import Chartist from 'chartist'
 import '../../node_modules/chartist/dist/chartist.min.css'
 
+export interface ImageChartData extends Chartist.IChartistData {
+  labels: Array<string>
+  series: Array<number>
+  images: Array<string>
+}
+
 @Component
 export default class ImagePieChart extends Vue {
+  @Prop({ type: Object, required: true })
+  public chartData!: ImageChartData | null
+
   private chart: any = null
 
-  mounted() {
-    const data = {
-      // series: [1],
-      // series: [1, 1, 1],
-      // series: [2, 1, 1],
-      // series: [1, 2, 1],
-      series: [8, 6, 4, 2, 1, 1],
-    }
-    const sum = (a: number, b: number) => {
-      return a + b
-    }
+  @Watch('chartData')
+  onChangeData(newValue: ImageChartData) {
+    console.log(newValue)
+    this.chart?.update(newValue)
+  }
 
-    this.chart = new Chartist.Pie('.ct-chart', data, {
-      labelInterpolationFnc(value: any) {
-        return Math.round((value / data.series.reduce(sum)) * 100) + '%'
+  mounted() {
+    this.chart = new Chartist.Pie('.ct-chart', this.chartData!, {
+      labelInterpolationFnc: (label: string, index: number) => {
+        const sum = this.chartData!.series.reduce((a: number, b: number) => {
+          return a + b
+        })
+        const ratio = (this.chartData!.series[index] / sum) * 100
+        return `${label}\n${Math.round(ratio)}%`
       },
     })
 
@@ -36,8 +44,6 @@ export default class ImagePieChart extends Vue {
 
     this.chart.on('draw', (context: any) => {
       if (context.type == 'slice') {
-        console.log(context)
-
         const imgId = `img-${Math.random().toString(36).substr(2, 8)}`
 
         const angleList = [
@@ -89,10 +95,7 @@ export default class ImagePieChart extends Vue {
         pattern.setAttribute('height', `${height}`)
 
         const image = document.createElementNS(svgNS, 'image')
-        image.setAttribute(
-          'href',
-          'https://www.pokemon-card.com/assets/images/card_images/large/SM11a/036912_P_RIZADONTERUNAGX.jpg'
-        )
+        image.setAttribute('href', this.chartData!.images[context.index])
         image.setAttribute('width', `${width}`)
         image.setAttribute('height', `${height}`)
 
