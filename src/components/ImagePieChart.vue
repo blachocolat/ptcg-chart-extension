@@ -17,8 +17,11 @@ export interface ImageChartData extends Chartist.IChartistData {
 
 @Component
 export default class ImagePieChart extends Vue {
-  @Prop({ type: Object, required: true })
-  public chartData!: ImageChartData | null
+  @Prop({ type: Object, required: true }) chartData!: ImageChartData | null
+  @Prop({ type: Number, default: 1.25 }) scale!: number
+  @Prop({ type: Number, default: 0 }) offsetX!: number
+  @Prop({ type: Number, default: -20 }) offsetY!: number
+  @Prop({ type: Number, default: 60 }) holeRadius!: number
 
   private chart: any = null
 
@@ -30,6 +33,11 @@ export default class ImagePieChart extends Vue {
 
   mounted() {
     this.chart = new Chartist.Pie('.ct-chart', this.chartData!, {
+      donut: true,
+      donutWidth: 160 - this.holeRadius,
+      chartPadding: 20,
+      labelOffset: 60,
+      labelDirection: 'explode',
       labelInterpolationFnc: (label: string, index: number) => {
         const sum = this.chartData!.series.reduce((a: number, b: number) => {
           return a + b
@@ -39,13 +47,15 @@ export default class ImagePieChart extends Vue {
       },
     })
 
-    const baseWidth = 400
-    const baseHeight = 560
+    const baseWidth = 320
+    const baseHeight = 447
 
     this.chart.on('draw', (context: any) => {
       if (context.type == 'slice') {
         const imgId = `img-${Math.random().toString(36).substr(2, 8)}`
 
+        const holeRadius = context.radius - this.chart.options.donutWidth / 2
+        const radius = context.radius + this.chart.options.donutWidth / 2
         const angleList = [
           context.startAngle,
           context.endAngle,
@@ -54,10 +64,10 @@ export default class ImagePieChart extends Vue {
           180,
           270,
         ]
-        let minX = 0
-        let minY = 0
-        let maxX = 0
-        let maxY = 0
+        let minX = Number.MAX_VALUE
+        let minY = Number.MAX_VALUE
+        let maxX = -Number.MAX_VALUE
+        let maxY = -Number.MAX_VALUE
 
         angleList.some((angle: number) => {
           if (angle < context.startAngle) {
@@ -67,19 +77,25 @@ export default class ImagePieChart extends Vue {
             return true // break
           }
 
-          const x = Math.sin(angle * (Math.PI / 180))
-          const y = -Math.cos(angle * (Math.PI / 180))
-          minX = Math.min(minX, x)
-          minY = Math.min(minY, y)
-          maxX = Math.max(maxX, x)
-          maxY = Math.max(maxY, y)
+          const outerX = Math.sin(angle * (Math.PI / 180))
+          const outerY = -Math.cos(angle * (Math.PI / 180))
+          const innerX = outerX * (holeRadius / radius)
+          const innerY = outerY * (holeRadius / radius)
+          minX = Math.min(minX, innerX, outerX)
+          minY = Math.min(minY, innerY, outerY)
+          maxX = Math.max(maxX, innerX, outerX)
+          maxY = Math.max(maxY, innerY, outerY)
         })
 
-        const scale = Math.max(maxX - minX, maxY - minY) / 2
+        const scale = (Math.max(maxX - minX, maxY - minY) / 2) * this.scale
         const width = baseWidth * scale
         const height = baseHeight * scale
-        const offsetX = context.radius * ((minX + maxX) / 2 - (scale - 1))
-        const offsetY = context.radius * ((minY + maxY) / 2 - (scale - 1))
+        const offsetX =
+          radius * ((minX + maxX) / 2 - (scale - 1)) + 160 + this.offsetX
+        const offsetY =
+          radius * ((minY + maxY) / 2 - ((maxY - minY) / 2 - 1)) +
+          20 +
+          this.offsetY
         console.log(`(${minX}, ${minY}) -> (${maxX}, ${maxY})`)
         console.log(`(${offsetX}, ${offsetY}) * ${scale}`)
 
@@ -103,7 +119,10 @@ export default class ImagePieChart extends Vue {
         defs.appendChild(pattern)
         this.chart.svg._node.appendChild(defs)
 
-        context.element._node.setAttribute('style', `fill: url(#${imgId})`)
+        context.element._node.setAttribute(
+          'style',
+          `stroke-width: ${this.chart.options.donutWidth}px; stroke: url(#${imgId})`
+        )
       }
     })
   }
@@ -115,7 +134,7 @@ export default class ImagePieChart extends Vue {
   position: relative;
   width: 100%;
   height: 0;
-  padding-bottom: 100%;
+  padding-bottom: 56.25%;
 
   .ct-chart {
     position: absolute;
