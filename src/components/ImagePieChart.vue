@@ -9,15 +9,40 @@ import { Component, Vue, Prop, Watch } from 'vue-property-decorator'
 import Chartist from 'chartist'
 import '../../node_modules/chartist/dist/chartist.min.css'
 
-export interface ImageChartData extends Chartist.IChartistData {
+export interface IImageChartData extends Chartist.IChartistData {
   labels: Array<string>
   series: Array<number>
   images: Array<string>
 }
 
+interface IChartDrawSliceData {
+  type: 'slice'
+  center: { x: number; y: number }
+  element: Chartist.IChartistSvg
+  endAngle: number
+  group: Chartist.IChartistSvg
+  index: number
+  path: Chartist.IChartistSvg
+  radius: number
+  series: number
+  startAngle: number
+  totalDataSum: number
+  value: number
+}
+
+interface IChartDrawLabelData {
+  type: 'label'
+  element: Chartist.IChartistSvg
+  group: Chartist.IChartistSvg
+  index: number
+  text: string
+  x: number
+  y: number
+}
+
 @Component
 export default class ImagePieChart extends Vue {
-  @Prop({ type: Object, required: true }) chartData!: ImageChartData | null
+  @Prop({ type: Object, required: true }) chartData!: IImageChartData | null
   @Prop({ type: Number, default: 1.25 }) scale!: number
   @Prop({ type: Number, default: 0 }) offsetX!: number
   @Prop({ type: Number, default: -20 }) offsetY!: number
@@ -26,121 +51,219 @@ export default class ImagePieChart extends Vue {
   private chart: any = null
 
   @Watch('chartData')
-  onChangeData(newValue: ImageChartData) {
-    console.log(newValue)
+  onChangeData(newValue: IImageChartData) {
     this.chart?.update(newValue)
+  }
+
+  private drawText(
+    parent: HTMLElement,
+    text: string,
+    attributes?: {
+      x?: string
+      y?: string
+      dx?: string
+      dy?: string
+      class?: string
+    }
+  ) {
+    const svgNS = 'http://www.w3.org/2000/svg'
+    const tspan = document.createElementNS(svgNS, 'tspan')
+
+    if (attributes) {
+      Object.entries(attributes).forEach(([name, value]) => {
+        tspan.setAttribute(name, value!)
+      })
+    }
+
+    tspan.textContent = text
+    parent.appendChild(tspan)
   }
 
   mounted() {
     this.chart = new Chartist.Pie('.ct-chart', this.chartData!, {
       donut: true,
+      donutSolid: true,
       donutWidth: 160 - this.holeRadius,
       chartPadding: 20,
-      labelOffset: 60,
+      labelOffset: 30,
       labelDirection: 'explode',
       labelInterpolationFnc: (label: string, index: number) => {
         const sum = this.chartData!.series.reduce((a: number, b: number) => {
           return a + b
         })
         const ratio = (this.chartData!.series[index] / sum) * 100
-        return `${label}\n${Math.round(ratio)}%`
+        return `${label}\n${ratio.toFixed(1)}%`
       },
     })
 
     const baseWidth = 320
     const baseHeight = 447
 
-    this.chart.on('draw', (context: any) => {
-      if (context.type == 'slice') {
-        const imgId = `img-${Math.random().toString(36).substr(2, 8)}`
+    this.chart.on(
+      'draw',
+      (context: IChartDrawSliceData | IChartDrawLabelData) => {
+        console.log(context)
 
-        const holeRadius = context.radius - this.chart.options.donutWidth / 2
-        const radius = context.radius + this.chart.options.donutWidth / 2
-        const angleList = [
-          context.startAngle,
-          context.endAngle,
-          0,
-          90,
-          180,
-          270,
-        ]
-        let minX = Number.MAX_VALUE
-        let minY = Number.MAX_VALUE
-        let maxX = -Number.MAX_VALUE
-        let maxY = -Number.MAX_VALUE
+        if (context.type == 'slice') {
+          const imgId = `img-${Math.random().toString(36).substr(2, 8)}`
 
-        angleList.some((angle: number) => {
-          if (angle < context.startAngle) {
-            return false // continue
-          }
-          if (context.endAngle < angle) {
-            return true // break
-          }
+          const angleList = [
+            context.startAngle,
+            context.endAngle,
+            0,
+            90,
+            180,
+            270,
+          ]
+          let minX = Number.MAX_VALUE
+          let minY = Number.MAX_VALUE
+          let maxX = -Number.MAX_VALUE
+          let maxY = -Number.MAX_VALUE
 
-          const outerX = Math.sin(angle * (Math.PI / 180))
-          const outerY = -Math.cos(angle * (Math.PI / 180))
-          const innerX = outerX * (holeRadius / radius)
-          const innerY = outerY * (holeRadius / radius)
-          minX = Math.min(minX, innerX, outerX)
-          minY = Math.min(minY, innerY, outerY)
-          maxX = Math.max(maxX, innerX, outerX)
-          maxY = Math.max(maxY, innerY, outerY)
-        })
+          angleList.some((angle: number) => {
+            if (angle < context.startAngle) {
+              return false // continue
+            }
+            if (context.endAngle < angle) {
+              return true // break
+            }
 
-        const scale = (Math.max(maxX - minX, maxY - minY) / 2) * this.scale
-        const width = baseWidth * scale
-        const height = baseHeight * scale
-        const offsetX =
-          radius * ((minX + maxX) / 2 - (scale - 1)) + 160 + this.offsetX
-        const offsetY =
-          radius * ((minY + maxY) / 2 - ((maxY - minY) / 2 - 1)) +
-          20 +
-          this.offsetY
-        console.log(`(${minX}, ${minY}) -> (${maxX}, ${maxY})`)
-        console.log(`(${offsetX}, ${offsetY}) * ${scale}`)
+            const outerX = Math.sin(angle * (Math.PI / 180))
+            const outerY = -Math.cos(angle * (Math.PI / 180))
+            const innerX = outerX * (this.holeRadius / context.radius)
+            const innerY = outerY * (this.holeRadius / context.radius)
+            minX = Math.min(minX, innerX, outerX)
+            minY = Math.min(minY, innerY, outerY)
+            maxX = Math.max(maxX, innerX, outerX)
+            maxY = Math.max(maxY, innerY, outerY)
+          })
 
-        const svgNS = 'http://www.w3.org/2000/svg'
-        const defs = document.createElementNS(svgNS, 'defs')
+          const scale = (Math.max(maxX - minX, maxY - minY) / 2) * this.scale
+          const width = baseWidth * scale
+          const height = baseHeight * scale
+          const offsetX =
+            context.radius * ((minX + maxX) / 2 - (scale - 1)) +
+            200 +
+            this.offsetX
+          const offsetY =
+            context.radius * ((minY + maxY) / 2 - ((maxY - minY) / 2 - 1)) +
+            20 +
+            this.offsetY
+          console.log(`(${minX}, ${minY}) -> (${maxX}, ${maxY})`)
+          console.log(`(${offsetX}, ${offsetY}) * ${scale}`)
 
-        const pattern = document.createElementNS(svgNS, 'pattern')
-        pattern.setAttribute('id', imgId)
-        pattern.setAttribute('patternUnits', 'userSpaceOnUse')
-        pattern.setAttribute('x', `${offsetX}`)
-        pattern.setAttribute('y', `${offsetY}`)
-        pattern.setAttribute('width', `${width}`)
-        pattern.setAttribute('height', `${height}`)
+          const svgNS = 'http://www.w3.org/2000/svg'
+          const defs = document.createElementNS(svgNS, 'defs')
 
-        const image = document.createElementNS(svgNS, 'image')
-        image.setAttribute('href', this.chartData!.images[context.index])
-        image.setAttribute('width', `${width}`)
-        image.setAttribute('height', `${height}`)
+          const pattern = document.createElementNS(svgNS, 'pattern')
+          pattern.setAttribute('id', imgId)
+          pattern.setAttribute('patternUnits', 'userSpaceOnUse')
+          pattern.setAttribute('x', `${offsetX}`)
+          pattern.setAttribute('y', `${offsetY}`)
+          pattern.setAttribute('width', `${width}`)
+          pattern.setAttribute('height', `${height}`)
 
-        pattern.appendChild(image)
-        defs.appendChild(pattern)
-        this.chart.svg._node.appendChild(defs)
+          const image = document.createElementNS(svgNS, 'image')
+          image.setAttribute('href', this.chartData!.images[context.index])
+          image.setAttribute('width', `${width}`)
+          image.setAttribute('height', `${height}`)
 
-        context.element._node.setAttribute(
-          'style',
-          `stroke-width: ${this.chart.options.donutWidth}px; stroke: url(#${imgId})`
-        )
+          pattern.appendChild(image)
+          defs.appendChild(pattern)
+          this.chart.svg._node.appendChild(defs)
+
+          context.element._node.setAttribute('style', `fill: url(#${imgId})`)
+        } else if (context.type == 'label') {
+          context.element._node.textContent = ''
+
+          context.text
+            .replace(/&amp;/g, '&')
+            .split('\n')
+            .forEach((subText) => {
+              // emphasize percentage text
+              const matches = subText.match(/^([0-9]{1,3})(\.[0-9]%)$/)
+              if (matches?.length == 3) {
+                this.drawText(context.element._node, matches[1], {
+                  x: `${context.x}`,
+                  dy: '1.1em',
+                  class: 'ct-label-border ct-label-strong',
+                })
+                this.drawText(context.element._node, matches[2], {
+                  dx: '0em',
+                  dy: '0em',
+                  class: 'ct-label-border',
+                })
+                this.drawText(context.element._node, matches[1], {
+                  x: `${context.x}`,
+                  dy: '0em',
+                  class: 'ct-label-strong',
+                })
+                this.drawText(context.element._node, matches[2], {
+                  dx: '0em',
+                  dy: '0em',
+                })
+              } else {
+                this.drawText(context.element._node, subText, {
+                  x: `${context.x}`,
+                  dy: '1.1em',
+                  class: 'ct-label-border',
+                })
+                this.drawText(context.element._node, subText, {
+                  x: `${context.x}`,
+                  dy: '0em',
+                })
+              }
+            })
+
+          const firstChild = context.element._node.firstChild as SVGElement
+          firstChild.removeAttribute('x')
+          firstChild.removeAttribute('dy')
+        }
       }
-    })
+    )
   }
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .ct-container {
   position: relative;
   width: 100%;
   height: 0;
-  padding-bottom: 56.25%;
+  padding-bottom: 50%;
 
   .ct-chart {
     position: absolute;
     width: 100%;
     height: 100%;
     top: 0;
+  }
+}
+
+.ct-chart-donut {
+  .ct-series {
+    stroke: #ffffff;
+    stroke-width: 2px;
+  }
+
+  .ct-label {
+    dominant-baseline: initial;
+  }
+}
+
+.ct-label {
+  fill: rgba(0, 0, 0, 0.87);
+  color: rgba(0, 0, 0, 0.87);
+  font-weight: bold;
+
+  &-strong {
+    font-size: 1.75em;
+  }
+
+  &-border {
+    fill: #ffffff;
+    stroke: #ffffff;
+    stroke-width: 3px;
   }
 }
 </style>

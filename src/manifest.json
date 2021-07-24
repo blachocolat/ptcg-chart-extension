@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "__MSG_extName__",
   "homepage_url": "http://localhost:8080/",
-  "description": "使用率グラフをつくります。",
+  "description": "デッキ分布図をつくります。",
   "default_locale": "en",
   "permissions": [
     "tabs",

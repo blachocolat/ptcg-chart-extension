@@ -1,11 +1,11 @@
 <template>
   <v-app>
     <v-card>
-      <v-card-title dense>使用率グラフつくるマシーン</v-card-title>
+      <v-card-title dense>デッキ分布図つくるマシーン</v-card-title>
 
       <v-divider />
 
-      <image-pie-chart :chartData="chartData" />
+      <image-pie-chart :chartData="chartData" :holeRadius="60" />
 
       <v-card-actions>
         <v-btn depressed color="primary" @click="onClick">テスト</v-btn>
@@ -16,14 +16,14 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import ImagePieChart, { ImageChartData } from '@/components/ImagePieChart.vue'
+import ImagePieChart, { IImageChartData } from '@/components/ImagePieChart.vue'
 import { Runtime } from 'webextension-polyfill-ts'
 
 @Component({
   components: { ImagePieChart },
 })
 export default class App extends Vue {
-  chartData: ImageChartData | null = null
+  chartData: IImageChartData | null = null
   port: Runtime.Port | null = null
 
   onClick() {
@@ -38,7 +38,6 @@ export default class App extends Vue {
         series: message.map((m) => m.count),
         images: message.map((m) => m.src),
       }
-      console.log(this.chartData)
     })
   }
 }
@@ -46,7 +45,7 @@ export default class App extends Vue {
 
 <style lang="scss">
 html {
-  width: 640px;
+  width: 720px;
 }
 </style>
 
