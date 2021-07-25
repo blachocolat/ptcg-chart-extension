@@ -1,6 +1,11 @@
 <template>
   <div class="ct-container">
     <div id="ct-chart" class="ct-chart" />
+
+    <!-- eslint-disable-next-line prettier/prettier -->
+    <div class="ct-signature">
+      powered by <v-icon>mdi-twitter</v-icon>@tilanosaur
+    </div>
   </div>
 </template>
 
@@ -118,15 +123,13 @@ export default class ImagePieChart extends Vue {
     this.chart.update(chartistData)
 
     // save as PNG
-    const element = document.getElementById('ct-chart')
-    if (element) {
-      const canvas = await html2canvas(element, { scale: 16 / 9 })
-      const a = document.createElement('a')
-      a.href = canvas.toDataURL('image/png')
-      a.download = 'ふぁいるねーむ.png'
-      a.click()
-      a.remove()
-    }
+    const element = this.$el as HTMLElement
+    const canvas = await html2canvas(element, { scale: 16 / 9 })
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = `デッキ分布図_${this.$dayjs().format('YYYYMMDDHHmmss')}.png`
+    a.click()
+    a.remove()
   }
 
   private drawText(
@@ -253,7 +256,7 @@ export default class ImagePieChart extends Vue {
           } else {
             context.element._node.setAttribute(
               'style',
-              `fill: rgba(0, 0, 0, 0.4)`
+              `fill: rgba(0, 0, 0, 0.38)`
             )
           }
         } else if (context.type == 'label') {
@@ -308,20 +311,6 @@ export default class ImagePieChart extends Vue {
 </script>
 
 <style lang="scss">
-.ct-container {
-  position: relative;
-  width: 100%;
-  height: 0;
-  padding-bottom: 50%;
-
-  .ct-chart {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-  }
-}
-
 .ct-chart-donut {
   .ct-series {
     stroke: #ffffff;
@@ -346,6 +335,36 @@ export default class ImagePieChart extends Vue {
     fill: #ffffff;
     stroke: #ffffff;
     stroke-width: 3px;
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+.ct-container {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 50%;
+
+  .ct-chart {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+  }
+}
+
+.ct-signature {
+  position: absolute;
+  right: 15px;
+  bottom: 10px;
+  font-size: 0.5rem;
+  color: rgba(0, 0, 0, 0.38);
+
+  .v-icon {
+    font-size: 10.5px;
+    color: inherit;
+    vertical-align: inherit;
   }
 }
 </style>

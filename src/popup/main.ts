@@ -4,8 +4,10 @@ import router from '@/router'
 import store from '@/store'
 import vuetify from '@/plugins/vuetify'
 import { browser } from 'webextension-polyfill-ts'
+import dayjs from 'dayjs'
 
 Vue.prototype.$browser = browser
+Vue.prototype.$dayjs = dayjs
 
 /* eslint-disable no-new */
 new Vue({

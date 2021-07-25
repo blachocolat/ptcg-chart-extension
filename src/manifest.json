@@ -3,7 +3,7 @@
   "name": "__MSG_extName__",
   "homepage_url": "https://github.com/blachocolat/ptcg-chart-extension",
   "description": "デッキ分布図をつくります。",
-  "default_locale": "ja",
+  "default_locale": "en",
   "permissions": [
     "tabs",
     "https://www.pokemon-card.com/deck/deck.html"
