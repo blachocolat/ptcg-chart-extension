@@ -5,7 +5,7 @@
 
       <v-divider />
 
-      <image-pie-chart :chartData="chartData" :holeRadius="60" />
+      <image-pie-chart ref="pieChart" :chartData="chartData" :holeRadius="60" />
 
       <v-card-actions>
         <v-btn depressed color="primary" @click="onClick">テスト</v-btn>
@@ -16,10 +16,10 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
+import { Runtime } from 'webextension-polyfill-ts'
 import ImagePieChart, {
   ImagePieChartData,
 } from '@/components/ImagePieChart.vue'
-import { Runtime } from 'webextension-polyfill-ts'
 
 @Component({
   components: { ImagePieChart },
@@ -28,8 +28,10 @@ export default class App extends Vue {
   chartData: ImagePieChartData[] = []
   port: Runtime.Port | null = null
 
-  onClick() {
-    this.port?.postMessage(Date.now())
+  async onClick() {
+    if (this.$refs.pieChart instanceof ImagePieChart) {
+      await this.$refs.pieChart.saveAsPNG()
+    }
   }
 
   mounted() {

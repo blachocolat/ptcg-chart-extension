@@ -1,12 +1,14 @@
 <template>
   <div class="ct-container">
-    <div class="ct-chart" />
+    <div id="ct-chart" class="ct-chart" />
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Vue, Prop, Watch } from 'vue-property-decorator'
 import Chartist from 'chartist'
+import html2canvas from 'html2canvas'
+import Utils from '@/plugins/utils'
 import '../../node_modules/chartist/dist/chartist.min.css'
 
 export interface ImagePieChartData {
@@ -99,6 +101,29 @@ export default class ImagePieChart extends Vue {
     this.chart.update(newValue)
   }
 
+  async saveAsPNG() {
+    // redraw with dataURL images
+    const promises = this.chartistData.imageSrcs.map(async (url) => {
+      return url ? Utils.createDataURL(url) : url
+    })
+    const dataURLs = await Promise.all(promises)
+    const chartistData = Object.assign(this.chartistData, {
+      imageSrcs: dataURLs,
+    })
+    this.chart.update(chartistData)
+
+    // save as PNG
+    const element = document.getElementById('ct-chart')
+    if (element) {
+      const canvas = await html2canvas(element)
+      const a = document.createElement('a')
+      a.href = canvas.toDataURL('image/png')
+      a.download = 'ふぁいるねーむ.png'
+      a.click()
+      a.remove()
+    }
+  }
+
   private drawText(
     parent: HTMLElement,
     text: string,
@@ -124,7 +149,7 @@ export default class ImagePieChart extends Vue {
   }
 
   mounted() {
-    this.chart = new Chartist.Pie('.ct-chart', this.chartistData, {
+    this.chart = new Chartist.Pie('#ct-chart', this.chartistData, {
       donut: true,
       donutSolid: true,
       donutWidth: 160 - this.holeRadius,
@@ -269,9 +294,11 @@ export default class ImagePieChart extends Vue {
             }
           })
 
-          const firstChild = context.element._node.firstChild as SVGElement
-          firstChild.removeAttribute('x')
-          firstChild.removeAttribute('dy')
+          const firstChild = context.element._node.firstChild
+          if (firstChild instanceof SVGElement) {
+            firstChild.removeAttribute('x')
+            firstChild.removeAttribute('dy')
+          }
         }
       }
     )
