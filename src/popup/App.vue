@@ -16,14 +16,16 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import ImagePieChart, { IImageChartData } from '@/components/ImagePieChart.vue'
+import ImagePieChart, {
+  ImagePieChartData,
+} from '@/components/ImagePieChart.vue'
 import { Runtime } from 'webextension-polyfill-ts'
 
 @Component({
   components: { ImagePieChart },
 })
 export default class App extends Vue {
-  chartData: IImageChartData | null = null
+  chartData: ImagePieChartData | null = null
   port: Runtime.Port | null = null
 
   onClick() {

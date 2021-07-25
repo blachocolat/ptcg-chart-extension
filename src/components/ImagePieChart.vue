@@ -9,10 +9,14 @@ import { Component, Vue, Prop, Watch } from 'vue-property-decorator'
 import Chartist from 'chartist'
 import '../../node_modules/chartist/dist/chartist.min.css'
 
-export interface IImageChartData extends Chartist.IChartistData {
+export interface ImagePieChartData extends Chartist.IChartistData {
   labels: Array<string>
   series: Array<number>
   images: Array<string>
+}
+
+interface ImagePieChartObject extends Chartist.IChartistPieChart {
+  svg: Chartist.IChartistSvg
 }
 
 interface IChartDrawSliceData {
@@ -42,16 +46,25 @@ interface IChartDrawLabelData {
 
 @Component
 export default class ImagePieChart extends Vue {
-  @Prop({ type: Object, required: true }) chartData!: IImageChartData | null
+  @Prop({
+    type: Object,
+    default: {
+      labels: [],
+      series: [],
+      images: [],
+    },
+  })
+  chartData!: ImagePieChartData
+  @Prop({ type: Number, default: 0.2 }) otherRatio!: number
   @Prop({ type: Number, default: 1.25 }) scale!: number
   @Prop({ type: Number, default: 0 }) offsetX!: number
   @Prop({ type: Number, default: -20 }) offsetY!: number
   @Prop({ type: Number, default: 60 }) holeRadius!: number
 
-  private chart: any = null
+  private chart!: ImagePieChartObject
 
   @Watch('chartData')
-  onChangeData(newValue: IImageChartData) {
+  onChangeData(newValue: ImagePieChartData) {
     this.chart?.update(newValue)
   }
 
@@ -63,7 +76,7 @@ export default class ImagePieChart extends Vue {
       y?: string
       dx?: string
       dy?: string
-      class?: string
+      className?: string
     }
   ) {
     const svgNS = 'http://www.w3.org/2000/svg'
@@ -71,7 +84,7 @@ export default class ImagePieChart extends Vue {
 
     if (attributes) {
       Object.entries(attributes).forEach(([name, value]) => {
-        tspan.setAttribute(name, value!)
+        tspan.setAttribute(name == 'className' ? 'class' : name, value!)
       })
     }
 
@@ -94,7 +107,7 @@ export default class ImagePieChart extends Vue {
         const ratio = (this.chartData!.series[index] / sum) * 100
         return `${label}\n${ratio.toFixed(1)}%`
       },
-    })
+    }) as ImagePieChartObject
 
     const baseWidth = 320
     const baseHeight = 447
@@ -183,27 +196,28 @@ export default class ImagePieChart extends Vue {
           context.element._node.removeAttribute('dx')
 
           lines.forEach((line) => {
-            // emphasize percentage text
+            // emphasize percentage labels
             const matches = line.match(/^([0-9]{1,3})(\.[0-9]%)$/)
+
             if (matches?.length == 3) {
               this.drawText(context.element._node, matches[1], {
                 x: `${context.x}`,
                 dy: '1.1em',
-                class: 'ct-label-border ct-label-strong',
+                className: 'ct-label-border ct-label-strong',
               })
               this.drawText(context.element._node, matches[2], {
-                class: 'ct-label-border',
+                className: 'ct-label-border',
               })
               this.drawText(context.element._node, matches[1], {
                 x: `${context.x}`,
-                class: 'ct-label-strong',
+                className: 'ct-label-strong',
               })
               this.drawText(context.element._node, matches[2])
             } else {
               this.drawText(context.element._node, line, {
                 x: `${context.x}`,
                 dy: '1.1em',
-                class: 'ct-label-border',
+                className: 'ct-label-border',
               })
               this.drawText(context.element._node, line, {
                 x: `${context.x}`,
