@@ -174,46 +174,42 @@ export default class ImagePieChart extends Vue {
 
           context.element._node.setAttribute('style', `fill: url(#${imgId})`)
         } else if (context.type == 'label') {
-          context.element._node.textContent = ''
+          const lines = context.text.replace(/&amp;/g, '&').split('\n')
 
-          context.text
-            .replace(/&amp;/g, '&')
-            .split('\n')
-            .forEach((subText) => {
-              // emphasize percentage text
-              const matches = subText.match(/^([0-9]{1,3})(\.[0-9]%)$/)
-              if (matches?.length == 3) {
-                this.drawText(context.element._node, matches[1], {
-                  x: `${context.x}`,
-                  dy: '1.1em',
-                  class: 'ct-label-border ct-label-strong',
-                })
-                this.drawText(context.element._node, matches[2], {
-                  dx: '0em',
-                  dy: '0em',
-                  class: 'ct-label-border',
-                })
-                this.drawText(context.element._node, matches[1], {
-                  x: `${context.x}`,
-                  dy: '0em',
-                  class: 'ct-label-strong',
-                })
-                this.drawText(context.element._node, matches[2], {
-                  dx: '0em',
-                  dy: '0em',
-                })
-              } else {
-                this.drawText(context.element._node, subText, {
-                  x: `${context.x}`,
-                  dy: '1.1em',
-                  class: 'ct-label-border',
-                })
-                this.drawText(context.element._node, subText, {
-                  x: `${context.x}`,
-                  dy: '0em',
-                })
-              }
-            })
+          context.element._node.textContent = ''
+          context.element._node.setAttribute('x', `${context.x}`)
+          context.element._node.setAttribute('y', `${context.y}`)
+          context.element._node.setAttribute('dy', `${1 - lines.length}em`)
+          context.element._node.removeAttribute('dx')
+
+          lines.forEach((line) => {
+            // emphasize percentage text
+            const matches = line.match(/^([0-9]{1,3})(\.[0-9]%)$/)
+            if (matches?.length == 3) {
+              this.drawText(context.element._node, matches[1], {
+                x: `${context.x}`,
+                dy: '1.1em',
+                class: 'ct-label-border ct-label-strong',
+              })
+              this.drawText(context.element._node, matches[2], {
+                class: 'ct-label-border',
+              })
+              this.drawText(context.element._node, matches[1], {
+                x: `${context.x}`,
+                class: 'ct-label-strong',
+              })
+              this.drawText(context.element._node, matches[2])
+            } else {
+              this.drawText(context.element._node, line, {
+                x: `${context.x}`,
+                dy: '1.1em',
+                class: 'ct-label-border',
+              })
+              this.drawText(context.element._node, line, {
+                x: `${context.x}`,
+              })
+            }
+          })
 
           const firstChild = context.element._node.firstChild as SVGElement
           firstChild.removeAttribute('x')
