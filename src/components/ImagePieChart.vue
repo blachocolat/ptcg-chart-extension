@@ -11,7 +11,7 @@ import html2canvas from 'html2canvas'
 import Utils from '@/plugins/utils'
 import '../../node_modules/chartist/dist/chartist.min.css'
 
-export interface ImagePieChartData {
+export type ImagePieChartData = {
   label: string
   value: number
   imageSrc?: string
@@ -64,35 +64,40 @@ export default class ImagePieChart extends Vue {
   private chart!: IChartistImagePieChart
 
   get chartistData(): IChartistImagePieChartData {
-    const sortedData = this.chartData.slice().sort((a, b) => {
+    this.chartData.sort((a, b) => {
       return b.value - a.value // order by value desc
     })
     const total =
-      sortedData.length > 0
-        ? sortedData.map((data) => data.value).reduce((a, b) => a + b)
+      this.chartData.length > 0
+        ? this.chartData.map((data) => data.value).reduce((a, b) => a + b)
         : 0
+    let subChartData: ImagePieChartData[] = []
     let subTotal = 0
-    let minValue = 0
+    let threshold = 0
 
-    while (
-      sortedData.length > 0 &&
-      (subTotal / total < this.otherRatio ||
-        sortedData[sortedData.length - 1].value == minValue)
-    ) {
-      minValue = sortedData.pop()!.value
-      subTotal += minValue
+    for (const data of this.chartData) {
+      if (data.value >= threshold) {
+        subChartData.push(data)
+        subTotal += data.value
+      } else {
+        break
+      }
+      if (1 - this.otherRatio <= subTotal / total) {
+        threshold = data.value
+      }
     }
-    if (subTotal > 0) {
-      sortedData.push({
+
+    if (subTotal < total) {
+      subChartData.push({
         label: 'その他',
-        value: subTotal,
+        value: total - subTotal,
       })
     }
 
     return {
-      labels: sortedData.map((data) => data.label),
-      series: sortedData.map((data) => data.value),
-      imageSrcs: sortedData.map((data) => data.imageSrc),
+      labels: subChartData.map((data) => data.label),
+      series: subChartData.map((data) => data.value),
+      imageSrcs: subChartData.map((data) => data.imageSrc),
     }
   }
 
@@ -172,8 +177,6 @@ export default class ImagePieChart extends Vue {
     this.chart.on(
       'draw',
       (context: IChartDrawSliceData | IChartDrawLabelData) => {
-        console.log(context)
-
         if (context.type == 'slice') {
           const imageSrc = this.chartistData.imageSrcs[context.index]
 
@@ -222,8 +225,6 @@ export default class ImagePieChart extends Vue {
               context.radius * ((minY + maxY) / 2 - ((maxY - minY) / 2 - 1)) +
               20 +
               this.offsetY
-            console.log(`(${minX}, ${minY}) -> (${maxX}, ${maxY})`)
-            console.log(`(${offsetX}, ${offsetY}) * ${scale}`)
 
             const svgNS = 'http://www.w3.org/2000/svg'
             const defs = document.createElementNS(svgNS, 'defs')
