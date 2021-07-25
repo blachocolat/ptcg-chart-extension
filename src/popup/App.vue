@@ -8,7 +8,17 @@
       <image-pie-chart ref="pieChart" :chartData="chartData" :holeRadius="60" />
 
       <v-card-actions>
-        <v-btn depressed color="primary" @click="onClick">テスト</v-btn>
+        <v-btn
+          depressed
+          block
+          color="primary"
+          :disabled="isProcessing"
+          :loading="isProcessing"
+          @click="onClick"
+        >
+          <v-icon left>mdi-download</v-icon>
+          ダウンロード
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-app>
@@ -27,10 +37,13 @@ import ImagePieChart, {
 export default class App extends Vue {
   chartData: ImagePieChartData[] = []
   port: Runtime.Port | null = null
+  isProcessing: boolean = false
 
   async onClick() {
     if (this.$refs.pieChart instanceof ImagePieChart) {
+      this.isProcessing = true
       await this.$refs.pieChart.saveAsPNG()
+      this.isProcessing = false
     }
   }
 
@@ -56,6 +69,38 @@ html {
 </style>
 
 <style lang="scss" scoped>
+.v-application {
+  &--is-ltr {
+    .v-btn {
+      &__content {
+        .v-icon {
+          &--left {
+            margin-right: 2px;
+          }
+          &--right {
+            margin-left: 2px;
+          }
+        }
+      }
+    }
+  }
+
+  .v-card {
+    &__actions {
+      & > .v-btn.v-btn {
+        .v-icon {
+          &--left {
+            margin-left: -2px;
+          }
+          &--right {
+            margin-right: -2px;
+          }
+        }
+      }
+    }
+  }
+}
+
 .v-card {
   &__subtitle,
   &__text,
@@ -65,6 +110,10 @@ html {
 
   &__actions {
     padding: 12px;
+
+    & > .v-btn.v-btn {
+      padding: 0 10px;
+    }
   }
 }
 </style>

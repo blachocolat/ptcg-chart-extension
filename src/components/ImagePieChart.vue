@@ -120,7 +120,7 @@ export default class ImagePieChart extends Vue {
     // save as PNG
     const element = document.getElementById('ct-chart')
     if (element) {
-      const canvas = await html2canvas(element)
+      const canvas = await html2canvas(element, { scale: 16 / 9 })
       const a = document.createElement('a')
       a.href = canvas.toDataURL('image/png')
       a.download = 'ふぁいるねーむ.png'
