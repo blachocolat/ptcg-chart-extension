@@ -9,13 +9,19 @@ import { Component, Vue, Prop, Watch } from 'vue-property-decorator'
 import Chartist from 'chartist'
 import '../../node_modules/chartist/dist/chartist.min.css'
 
-export interface ImagePieChartData extends Chartist.IChartistData {
-  labels: Array<string>
-  series: Array<number>
-  images: Array<string>
+export interface ImagePieChartData {
+  label: string
+  value: number
+  imageSrc?: string
 }
 
-interface ImagePieChartObject extends Chartist.IChartistPieChart {
+interface IChartistImagePieChartData extends Chartist.IChartistData {
+  labels: Array<string>
+  series: Array<number>
+  imageSrcs: Array<string | undefined>
+}
+
+interface IChartistImagePieChart extends Chartist.IChartistPieChart {
   svg: Chartist.IChartistSvg
 }
 
@@ -46,26 +52,51 @@ interface IChartDrawLabelData {
 
 @Component
 export default class ImagePieChart extends Vue {
-  @Prop({
-    type: Object,
-    default: {
-      labels: [],
-      series: [],
-      images: [],
-    },
-  })
-  chartData!: ImagePieChartData
-  @Prop({ type: Number, default: 0.2 }) otherRatio!: number
+  @Prop({ type: Array, default: [] }) chartData!: ImagePieChartData[]
+  @Prop({ type: Number, default: 0.1 }) otherRatio!: number
   @Prop({ type: Number, default: 1.25 }) scale!: number
   @Prop({ type: Number, default: 0 }) offsetX!: number
   @Prop({ type: Number, default: -20 }) offsetY!: number
   @Prop({ type: Number, default: 60 }) holeRadius!: number
 
-  private chart!: ImagePieChartObject
+  private chart!: IChartistImagePieChart
 
-  @Watch('chartData')
-  onChangeData(newValue: ImagePieChartData) {
-    this.chart?.update(newValue)
+  get chartistData(): IChartistImagePieChartData {
+    const sortedData = this.chartData.slice().sort((a, b) => {
+      return b.value - a.value // order by value desc
+    })
+    const total =
+      sortedData.length > 0
+        ? sortedData.map((data) => data.value).reduce((a, b) => a + b)
+        : 0
+    let subTotal = 0
+    let minValue = 0
+
+    while (
+      sortedData.length > 0 &&
+      (subTotal / total < this.otherRatio ||
+        sortedData[sortedData.length - 1].value == minValue)
+    ) {
+      minValue = sortedData.pop()!.value
+      subTotal += minValue
+    }
+    if (subTotal > 0) {
+      sortedData.push({
+        label: 'その他',
+        value: subTotal,
+      })
+    }
+
+    return {
+      labels: sortedData.map((data) => data.label),
+      series: sortedData.map((data) => data.value),
+      imageSrcs: sortedData.map((data) => data.imageSrc),
+    }
+  }
+
+  @Watch('chartistData')
+  onChangeData(newValue: IChartistImagePieChartData) {
+    this.chart.update(newValue)
   }
 
   private drawText(
@@ -93,7 +124,7 @@ export default class ImagePieChart extends Vue {
   }
 
   mounted() {
-    this.chart = new Chartist.Pie('.ct-chart', this.chartData!, {
+    this.chart = new Chartist.Pie('.ct-chart', this.chartistData, {
       donut: true,
       donutSolid: true,
       donutWidth: 160 - this.holeRadius,
@@ -101,13 +132,14 @@ export default class ImagePieChart extends Vue {
       labelOffset: 30,
       labelDirection: 'explode',
       labelInterpolationFnc: (label: string, index: number) => {
-        const sum = this.chartData!.series.reduce((a: number, b: number) => {
-          return a + b
-        })
-        const ratio = (this.chartData!.series[index] / sum) * 100
+        const total =
+          this.chartistData.series.length > 0
+            ? this.chartistData.series.reduce((a, b) => a + b)
+            : 0
+        const ratio = (this.chartistData.series[index] / total) * 100
         return `${label}\n${ratio.toFixed(1)}%`
       },
-    }) as ImagePieChartObject
+    }) as IChartistImagePieChart
 
     const baseWidth = 320
     const baseHeight = 447
@@ -118,76 +150,88 @@ export default class ImagePieChart extends Vue {
         console.log(context)
 
         if (context.type == 'slice') {
-          const imgId = `img-${Math.random().toString(36).substr(2, 8)}`
+          const imageSrc = this.chartistData.imageSrcs[context.index]
 
-          const angleList = [
-            context.startAngle,
-            context.endAngle,
-            0,
-            90,
-            180,
-            270,
-          ]
-          let minX = Number.MAX_VALUE
-          let minY = Number.MAX_VALUE
-          let maxX = -Number.MAX_VALUE
-          let maxY = -Number.MAX_VALUE
+          if (imageSrc) {
+            const imageId = `img-${Math.random().toString(36).substr(2, 8)}`
 
-          angleList.some((angle: number) => {
-            if (angle < context.startAngle) {
-              return false // continue
+            const angleList = [
+              context.startAngle,
+              context.endAngle,
+              0,
+              90,
+              180,
+              270,
+            ]
+            let minX = Number.MAX_VALUE
+            let minY = Number.MAX_VALUE
+            let maxX = -Number.MAX_VALUE
+            let maxY = -Number.MAX_VALUE
+
+            for (const angle of angleList) {
+              if (angle < context.startAngle) {
+                continue
+              }
+              if (context.endAngle < angle) {
+                break
+              }
+
+              const outerX = Math.sin(angle * (Math.PI / 180))
+              const outerY = -Math.cos(angle * (Math.PI / 180))
+              const innerX = outerX * (this.holeRadius / context.radius)
+              const innerY = outerY * (this.holeRadius / context.radius)
+              minX = Math.min(minX, innerX, outerX)
+              minY = Math.min(minY, innerY, outerY)
+              maxX = Math.max(maxX, innerX, outerX)
+              maxY = Math.max(maxY, innerY, outerY)
             }
-            if (context.endAngle < angle) {
-              return true // break
-            }
 
-            const outerX = Math.sin(angle * (Math.PI / 180))
-            const outerY = -Math.cos(angle * (Math.PI / 180))
-            const innerX = outerX * (this.holeRadius / context.radius)
-            const innerY = outerY * (this.holeRadius / context.radius)
-            minX = Math.min(minX, innerX, outerX)
-            minY = Math.min(minY, innerY, outerY)
-            maxX = Math.max(maxX, innerX, outerX)
-            maxY = Math.max(maxY, innerY, outerY)
-          })
+            const scale = (Math.max(maxX - minX, maxY - minY) / 2) * this.scale
+            const width = baseWidth * scale
+            const height = baseHeight * scale
+            const offsetX =
+              context.radius * ((minX + maxX) / 2 - (scale - 1)) +
+              200 +
+              this.offsetX
+            const offsetY =
+              context.radius * ((minY + maxY) / 2 - ((maxY - minY) / 2 - 1)) +
+              20 +
+              this.offsetY
+            console.log(`(${minX}, ${minY}) -> (${maxX}, ${maxY})`)
+            console.log(`(${offsetX}, ${offsetY}) * ${scale}`)
 
-          const scale = (Math.max(maxX - minX, maxY - minY) / 2) * this.scale
-          const width = baseWidth * scale
-          const height = baseHeight * scale
-          const offsetX =
-            context.radius * ((minX + maxX) / 2 - (scale - 1)) +
-            200 +
-            this.offsetX
-          const offsetY =
-            context.radius * ((minY + maxY) / 2 - ((maxY - minY) / 2 - 1)) +
-            20 +
-            this.offsetY
-          console.log(`(${minX}, ${minY}) -> (${maxX}, ${maxY})`)
-          console.log(`(${offsetX}, ${offsetY}) * ${scale}`)
+            const svgNS = 'http://www.w3.org/2000/svg'
+            const defs = document.createElementNS(svgNS, 'defs')
 
-          const svgNS = 'http://www.w3.org/2000/svg'
-          const defs = document.createElementNS(svgNS, 'defs')
+            const pattern = document.createElementNS(svgNS, 'pattern')
+            pattern.setAttribute('id', imageId)
+            pattern.setAttribute('patternUnits', 'userSpaceOnUse')
+            pattern.setAttribute('x', `${offsetX}`)
+            pattern.setAttribute('y', `${offsetY}`)
+            pattern.setAttribute('width', `${width}`)
+            pattern.setAttribute('height', `${height}`)
 
-          const pattern = document.createElementNS(svgNS, 'pattern')
-          pattern.setAttribute('id', imgId)
-          pattern.setAttribute('patternUnits', 'userSpaceOnUse')
-          pattern.setAttribute('x', `${offsetX}`)
-          pattern.setAttribute('y', `${offsetY}`)
-          pattern.setAttribute('width', `${width}`)
-          pattern.setAttribute('height', `${height}`)
+            const image = document.createElementNS(svgNS, 'image')
+            image.setAttribute('href', imageSrc)
+            image.setAttribute('width', `${width}`)
+            image.setAttribute('height', `${height}`)
 
-          const image = document.createElementNS(svgNS, 'image')
-          image.setAttribute('href', this.chartData!.images[context.index])
-          image.setAttribute('width', `${width}`)
-          image.setAttribute('height', `${height}`)
+            pattern.appendChild(image)
+            defs.appendChild(pattern)
+            this.chart.svg._node.appendChild(defs)
 
-          pattern.appendChild(image)
-          defs.appendChild(pattern)
-          this.chart.svg._node.appendChild(defs)
-
-          context.element._node.setAttribute('style', `fill: url(#${imgId})`)
+            context.element._node.setAttribute(
+              'style',
+              `fill: url(#${imageId})`
+            )
+          } else {
+            context.element._node.setAttribute(
+              'style',
+              `fill: rgba(0, 0, 0, 0.4)`
+            )
+          }
         } else if (context.type == 'label') {
-          const lines = context.text.replace(/&amp;/g, '&').split('\n')
+          const lines = context.text.split('\n')
 
           context.element._node.textContent = ''
           context.element._node.setAttribute('x', `${context.x}`)
@@ -196,8 +240,8 @@ export default class ImagePieChart extends Vue {
           context.element._node.removeAttribute('dx')
 
           lines.forEach((line) => {
-            // emphasize percentage labels
-            const matches = line.match(/^([0-9]{1,3})(\.[0-9]%)$/)
+            // emphasize the percentage
+            const matches = line.match(/^([0-9]{1,3})((?:\.[0-9]+)?%)$/)
 
             if (matches?.length == 3) {
               this.drawText(context.element._node, matches[1], {

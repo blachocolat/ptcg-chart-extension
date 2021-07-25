@@ -25,7 +25,7 @@ import { Runtime } from 'webextension-polyfill-ts'
   components: { ImagePieChart },
 })
 export default class App extends Vue {
-  chartData: ImagePieChartData | null = null
+  chartData: ImagePieChartData[] = []
   port: Runtime.Port | null = null
 
   onClick() {
@@ -34,12 +34,14 @@ export default class App extends Vue {
 
   mounted() {
     this.port = this.$browser.runtime.connect()
-    this.port.onMessage.addListener((message) => {
-      this.chartData = {
-        labels: message.map((m) => m.name),
-        series: message.map((m) => m.count),
-        images: message.map((m) => m.src),
-      }
+    this.port.onMessage.addListener((message: any[]) => {
+      this.chartData = message.map((m) => {
+        return {
+          label: m.name.replace(/&amp;/g, '&'),
+          value: m.count,
+          imageSrc: m.imageSrc,
+        }
+      })
     })
   }
 }
