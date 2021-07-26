@@ -60,7 +60,7 @@ interface IChartDrawLabelData {
 @Component
 export default class ImagePieChart extends Vue {
   @Prop({ type: Array, default: [] }) chartData!: ImagePieChartData[]
-  @Prop({ type: Number, default: 0.1 }) otherRatio!: number
+  @Prop({ type: Number, default: 0.15 }) otherRatio!: number
   @Prop({ type: Number, default: 1.25 }) scale!: number
   @Prop({ type: Number, default: 0 }) offsetX!: number
   @Prop({ type: Number, default: -20 }) offsetY!: number

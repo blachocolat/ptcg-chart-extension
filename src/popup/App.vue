@@ -5,12 +5,26 @@
 
       <v-divider />
 
-      <image-pie-chart ref="pieChart" :chartData="chartData" :holeRadius="60" />
+      <image-pie-chart
+        ref="pieChart"
+        :chartData="chartData"
+        :holeRadius="60"
+        :otherRatio="otherRatio / 100"
+      />
 
       <v-card-actions>
+        <v-slider
+          v-model="otherRatio"
+          dense
+          hide-details
+          thumb-label
+          label="その他の割合"
+          max="50"
+          min="0"
+        ></v-slider>
+
         <v-btn
           depressed
-          block
           color="primary"
           :disabled="isProcessing"
           :loading="isProcessing"
@@ -37,6 +51,7 @@ import ImagePieChart, {
 export default class App extends Vue {
   chartData: ImagePieChartData[] = []
   port: Runtime.Port | null = null
+  otherRatio: number = 15
   isProcessing: boolean = false
 
   async onClick() {
