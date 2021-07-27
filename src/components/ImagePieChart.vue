@@ -23,7 +23,7 @@ export type ImagePieChartData = {
 }
 
 interface IChartistImagePieChartData extends Chartist.IChartistData {
-  labels: Array<string>
+  labels?: Array<string>
   series: Array<number>
   imageSrcs: Array<string | undefined>
 }
@@ -61,6 +61,7 @@ interface IChartDrawLabelData {
 export default class ImagePieChart extends Vue {
   @Prop({ type: Array, default: [] }) chartData!: ImagePieChartData[]
   @Prop({ type: Number, default: 0.15 }) otherRatio!: number
+  @Prop({ type: Boolean, default: false }) hideLabel!: boolean
   @Prop({ type: Number, default: 1.25 }) scale!: number
   @Prop({ type: Number, default: 0 }) offsetX!: number
   @Prop({ type: Number, default: -20 }) offsetY!: number
@@ -106,9 +107,34 @@ export default class ImagePieChart extends Vue {
     }
   }
 
+  get chartistOptions(): Chartist.IPieChartOptions {
+    return {
+      donut: true,
+      donutSolid: true,
+      donutWidth: 160 - this.holeRadius,
+      chartPadding: 20,
+      labelOffset: 30,
+      labelDirection: 'explode',
+      showLabel: !this.hideLabel,
+      labelInterpolationFnc: (label: string | number, index: number) => {
+        const total =
+          this.chartistData.series.length > 0
+            ? this.chartistData.series.reduce((a, b) => a + b)
+            : 0
+        const ratio = (this.chartistData.series[index] / total) * 100
+        return `${label}\n${ratio.toFixed(1)}%`
+      },
+    }
+  }
+
   @Watch('chartistData')
   onChangeData(newValue: IChartistImagePieChartData) {
-    this.chart.update(newValue)
+    this.chart.update(newValue, this.chartistOptions)
+  }
+
+  @Watch('chartistOptions')
+  onChangeOptions(newValue: Chartist.IPieChartOptions) {
+    this.chart.update(this.chartistData, newValue)
   }
 
   async saveAsPNG() {
@@ -120,7 +146,7 @@ export default class ImagePieChart extends Vue {
     const chartistData = Object.assign(this.chartistData, {
       imageSrcs: dataURLs,
     })
-    this.chart.update(chartistData)
+    this.chart.update(chartistData, this.chartistOptions)
 
     // save as PNG
     const element = this.$el as HTMLElement
@@ -157,22 +183,11 @@ export default class ImagePieChart extends Vue {
   }
 
   mounted() {
-    this.chart = new Chartist.Pie('#ct-chart', this.chartistData, {
-      donut: true,
-      donutSolid: true,
-      donutWidth: 160 - this.holeRadius,
-      chartPadding: 20,
-      labelOffset: 30,
-      labelDirection: 'explode',
-      labelInterpolationFnc: (label: string, index: number) => {
-        const total =
-          this.chartistData.series.length > 0
-            ? this.chartistData.series.reduce((a, b) => a + b)
-            : 0
-        const ratio = (this.chartistData.series[index] / total) * 100
-        return `${label}\n${ratio.toFixed(1)}%`
-      },
-    }) as IChartistImagePieChart
+    this.chart = new Chartist.Pie(
+      '#ct-chart',
+      this.chartistData,
+      this.chartistOptions
+    ) as IChartistImagePieChart
 
     const baseWidth = 320
     const baseHeight = 447

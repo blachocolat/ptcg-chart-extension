@@ -3,9 +3,9 @@
     <v-card>
       <image-pie-chart
         ref="pieChart"
-        :chartData="chartData"
-        :holeRadius="60"
-        :otherRatio="otherRatio / 100"
+        :chart-data="chartData"
+        :other-ratio="otherRatio / 100"
+        :hide-label="isLabelHidden"
       />
 
       <v-divider />
@@ -41,8 +41,16 @@
         </v-slider>
 
         <!-- toggle show/hide labels -->
-        <v-btn icon color="primary">
+        <v-btn
+          v-if="!isLabelHidden"
+          icon
+          color="primary"
+          @click="isLabelHidden = true"
+        >
           <v-icon>mdi-alphabetical-variant</v-icon>
+        </v-btn>
+        <v-btn v-else icon @click="isLabelHidden = false">
+          <v-icon>mdi-alphabetical-variant-off</v-icon>
         </v-btn>
 
         <!-- toggle light/dark mode -->
@@ -80,6 +88,7 @@ export default class App extends Vue {
   chartData: ImagePieChartData[] = []
   port: Runtime.Port | null = null
   otherRatio: number = 15
+  isLabelHidden: boolean = false
   isSliderFocused: boolean = false
   isProcessing: boolean = false
 
