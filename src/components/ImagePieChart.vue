@@ -18,7 +18,7 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Prop, Watch } from 'vue-property-decorator'
+import { Component, Vue, Emit, Prop, Watch } from 'vue-property-decorator'
 import Chartist from 'chartist'
 import html2canvas from 'html2canvas'
 import Utils from '@/plugins/utils'
@@ -146,7 +146,8 @@ export default class ImagePieChart extends Vue {
     this.chart.update(this.chartistData, newValue)
   }
 
-  async saveAsPNG() {
+  @Emit('capture')
+  async captureAsPNG() {
     // redraw with dataURL images
     const promises = this.chartistData.imageSrcs.map(async (url) => {
       return url ? Utils.createDataURL(url) : url
@@ -158,17 +159,13 @@ export default class ImagePieChart extends Vue {
     this.chart.update(chartistData, this.chartistOptions)
 
     // save as PNG
-    const element = this.$el as HTMLElement
-    const canvas = await html2canvas(element, {
+    const el = this.$el as HTMLElement
+    const canvas = await html2canvas(el, {
       scale: 16 / 9,
       backgroundColor: !this.transparentBackground ? '#ffffff' : null,
     })
 
-    const a = document.createElement('a')
-    a.href = canvas.toDataURL('image/png')
-    a.download = `デッキ分布図_${this.$dayjs().format('YYYYMMDDHHmmss')}.png`
-    a.click()
-    a.remove()
+    return canvas.toDataURL('image/png')
   }
 
   private drawText(

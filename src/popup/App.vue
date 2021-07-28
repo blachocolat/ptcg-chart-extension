@@ -105,7 +105,8 @@ export default class App extends Vue {
   async onClick() {
     if (this.$refs.pieChart instanceof ImagePieChart) {
       this.isProcessing = true
-      await this.$refs.pieChart.saveAsPNG()
+      const dataURL = await this.$refs.pieChart.captureAsPNG()
+      this.port?.postMessage(dataURL)
       this.isProcessing = false
     }
   }
@@ -170,6 +171,10 @@ html {
         }
       }
     }
+  }
+
+  &--wrap {
+    min-height: initial !important;
   }
 }
 </style>

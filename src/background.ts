@@ -1,4 +1,5 @@
 import { browser, Tabs } from 'webextension-polyfill-ts'
+import dayjs from 'dayjs'
 
 const showOrHidePageAction = async (tab: Tabs.Tab) => {
   if (tab.url && tab.id) {
@@ -30,4 +31,13 @@ browser.runtime.onConnect.addListener(async (port) => {
   if (response != null) {
     port.postMessage(response[0])
   }
+
+  port.onMessage.addListener((message) => {
+    // save in background to avoid quiting the popup
+    const a = document.createElement('a')
+    a.href = message
+    a.download = `デッキ分布図_${dayjs().format('YYYYMMDDHHmmss')}.png`
+    a.click()
+    a.remove()
+  })
 })
