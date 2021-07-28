@@ -15,12 +15,28 @@
         <!-- input chart title -->
         <v-text-field
           placeholder="大会名など"
-          prepend-icon="mdi-format-title"
           outlined
           dense
           hide-details
           :style="{ 'flex-grow': 0.1 }"
-        />
+          @focus="isTextFieldFocused = true"
+          @blur="isTextFieldFocused = false"
+        >
+          <template v-slot:prepend>
+            <v-tooltip top>
+              <template v-slot:activator="{ on, attrs }">
+                <v-icon
+                  :class="{ 'primary--text': isTextFieldFocused }"
+                  v-bind="attrs"
+                  v-on="on"
+                >
+                  mdi-format-title
+                </v-icon>
+              </template>
+              <span>タイトル</span>
+            </v-tooltip>
+          </template>
+        </v-text-field>
 
         <!-- up/down other ratio -->
         <v-slider
@@ -35,9 +51,18 @@
           @end="isSliderFocused = false"
         >
           <template v-slot:prepend>
-            <v-icon :class="{ 'primary--text': isSliderFocused }">
-              mdi-chart-arc
-            </v-icon>
+            <v-tooltip top>
+              <template v-slot:activator="{ on, attrs }">
+                <v-icon
+                  :class="{ 'primary--text': isSliderFocused }"
+                  v-bind="attrs"
+                  v-on="on"
+                >
+                  mdi-chart-arc
+                </v-icon>
+              </template>
+              <span>その他の割合</span>
+            </v-tooltip>
           </template>
         </v-slider>
 
@@ -48,10 +73,24 @@
           color="primary"
           @click="isLabelHidden = true"
         >
-          <v-icon>mdi-alphabetical-variant</v-icon>
+          <v-tooltip top>
+            <template v-slot:activator="{ on, attrs }">
+              <v-icon v-bind="attrs" v-on="on">
+                mdi-alphabetical-variant
+              </v-icon>
+            </template>
+            <span>ラベルあり</span>
+          </v-tooltip>
         </v-btn>
         <v-btn v-else icon @click="isLabelHidden = false">
-          <v-icon>mdi-alphabetical-variant-off</v-icon>
+          <v-tooltip top>
+            <template v-slot:activator="{ on, attrs }">
+              <v-icon v-bind="attrs" v-on="on">
+                mdi-alphabetical-variant-off
+              </v-icon>
+            </template>
+            <span>ラベルなし</span>
+          </v-tooltip>
         </v-btn>
 
         <!-- toggle background opacity -->
@@ -61,10 +100,20 @@
           color="primary"
           @click="isBackgroundTransparent = false"
         >
-          <v-icon>mdi-invert-colors</v-icon>
+          <v-tooltip top>
+            <template v-slot:activator="{ on, attrs }">
+              <v-icon v-bind="attrs" v-on="on">mdi-invert-colors</v-icon>
+            </template>
+            <span>背景色なし</span>
+          </v-tooltip>
         </v-btn>
         <v-btn v-else icon @click="isBackgroundTransparent = true">
-          <v-icon>mdi-invert-colors-off</v-icon>
+          <v-tooltip top>
+            <template v-slot:activator="{ on, attrs }">
+              <v-icon v-bind="attrs" v-on="on">mdi-invert-colors-off</v-icon>
+            </template>
+            <span>背景色あり</span>
+          </v-tooltip>
         </v-btn>
 
         <!-- downlaod button -->
@@ -99,6 +148,7 @@ export default class App extends Vue {
   otherRatio: number = 15
   isLabelHidden: boolean = false
   isBackgroundTransparent: boolean = false
+  isTextFieldFocused: boolean = false
   isSliderFocused: boolean = false
   isProcessing: boolean = false
 
@@ -175,6 +225,22 @@ html {
 
   &--wrap {
     min-height: initial !important;
+  }
+}
+
+.v-text-field {
+  &--full-width,
+  &--enclosed {
+    &.v-input--dense:not(.v-text-field--solo).v-text-field--outlined {
+      .v-input {
+        &__prepend-outer,
+        &__prepend-inner,
+        &__append-inner,
+        &__append-outer {
+          margin-top: 6px !important;
+        }
+      }
+    }
   }
 }
 </style>
