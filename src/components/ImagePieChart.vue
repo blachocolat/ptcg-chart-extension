@@ -10,6 +10,9 @@
 
     <div id="ct-chart" class="ct-chart" />
 
+    <div class="ct-title ct-title--border">{{ title }}</div>
+    <div class="ct-title">{{ title }}</div>
+
     <!-- eslint-disable-next-line prettier/prettier -->
     <div class="ct-signature">
       powered by <v-icon>mdi-twitter</v-icon>@tilanosaur
@@ -68,6 +71,7 @@ interface IChartDrawLabelData {
 @Component
 export default class ImagePieChart extends Vue {
   @Prop({ type: Array, default: [] }) chartData!: ImagePieChartData[]
+  @Prop({ type: String, default: '' }) title!: string
   @Prop({ type: Number, default: 0.15 }) otherRatio!: number
   @Prop({ type: Boolean, default: false }) hideLabel!: boolean
   @Prop({ type: Boolean, default: false }) transparentBackground!: boolean
@@ -298,21 +302,21 @@ export default class ImagePieChart extends Vue {
               this.drawText(context.element._node, matches[1], {
                 x: `${context.x}`,
                 dy: '1.1em',
-                className: 'ct-label-border ct-label-strong',
+                className: 'ct-label--border ct-label--strong',
               })
               this.drawText(context.element._node, matches[2], {
-                className: 'ct-label-border',
+                className: 'ct-label--border',
               })
               this.drawText(context.element._node, matches[1], {
                 x: `${context.x}`,
-                className: 'ct-label-strong',
+                className: 'ct-label--strong',
               })
               this.drawText(context.element._node, matches[2])
             } else {
               this.drawText(context.element._node, line, {
                 x: `${context.x}`,
                 dy: '1.1em',
-                className: 'ct-label-border',
+                className: 'ct-label--border',
               })
               this.drawText(context.element._node, line, {
                 x: `${context.x}`,
@@ -345,15 +349,15 @@ export default class ImagePieChart extends Vue {
 }
 
 .ct-label {
+  font-weight: bold;
   fill: rgba(0, 0, 0, 0.87);
   color: rgba(0, 0, 0, 0.87);
-  font-weight: bold;
 
-  &-strong {
+  &--strong {
     font-size: 1.75em;
   }
 
-  &-border {
+  &--border {
     fill: #ffffff;
     stroke: #ffffff;
     stroke-width: 3px;
@@ -383,14 +387,33 @@ export default class ImagePieChart extends Vue {
     position: absolute;
     width: 100%;
     height: 100%;
-    top: 0;
+  }
+
+  .ct-title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.25em;
+    font-weight: bold;
+    color: rgba(0, 0, 0, 0.87);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    text-align: center;
+    line-height: 1.25;
+
+    &--border {
+      color: #ffffff;
+      text-stroke: 3px #ffffff;
+      -webkit-text-stroke: 3px #ffffff;
+    }
   }
 
   .ct-signature {
     position: absolute;
     right: 15px;
     bottom: 10px;
-    font-size: 0.5rem;
+    font-size: 0.5em;
     color: rgba(0, 0, 0, 0.38);
 
     .v-icon {
