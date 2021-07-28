@@ -4,6 +4,7 @@
       <image-pie-chart
         ref="pieChart"
         :chart-data="chartData"
+        :title="title"
         :other-ratio="otherRatio / 100"
         :hide-label="isLabelHidden"
         :transparent-background="isBackgroundTransparent"
@@ -13,9 +14,11 @@
 
       <v-card-actions>
         <!-- input chart title -->
-        <v-text-field
+        <v-textarea
+          v-model="title"
           placeholder="大会名など"
           outlined
+          rows="1"
           dense
           hide-details
           :style="{ 'flex-grow': 0.1 }"
@@ -36,7 +39,7 @@
               <span>タイトル</span>
             </v-tooltip>
           </template>
-        </v-text-field>
+        </v-textarea>
 
         <!-- up/down other ratio -->
         <v-slider
@@ -145,9 +148,12 @@ import ImagePieChart, {
 export default class App extends Vue {
   chartData: ImagePieChartData[] = []
   port: Runtime.Port | null = null
+
+  title: string = ''
   otherRatio: number = 15
   isLabelHidden: boolean = false
   isBackgroundTransparent: boolean = false
+
   isTextFieldFocused: boolean = false
   isSliderFocused: boolean = false
   isProcessing: boolean = false
