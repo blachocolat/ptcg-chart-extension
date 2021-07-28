@@ -98,24 +98,24 @@
 
         <!-- toggle background opacity -->
         <v-btn
-          v-if="isBackgroundTransparent"
+          v-if="!isBackgroundTransparent"
           icon
           color="primary"
-          @click="isBackgroundTransparent = false"
+          @click="isBackgroundTransparent = true"
         >
           <v-tooltip top>
             <template v-slot:activator="{ on, attrs }">
               <v-icon v-bind="attrs" v-on="on">mdi-invert-colors</v-icon>
             </template>
-            <span>背景色なし</span>
+            <span>背景色あり</span>
           </v-tooltip>
         </v-btn>
-        <v-btn v-else icon @click="isBackgroundTransparent = true">
+        <v-btn v-else icon @click="isBackgroundTransparent = false">
           <v-tooltip top>
             <template v-slot:activator="{ on, attrs }">
               <v-icon v-bind="attrs" v-on="on">mdi-invert-colors-off</v-icon>
             </template>
-            <span>背景色あり</span>
+            <span>背景色なし</span>
           </v-tooltip>
         </v-btn>
 
