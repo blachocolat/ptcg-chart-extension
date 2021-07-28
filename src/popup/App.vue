@@ -6,6 +6,7 @@
         :chart-data="chartData"
         :other-ratio="otherRatio / 100"
         :hide-label="isLabelHidden"
+        :transparent-background="isBackgroundTransparent"
       />
 
       <v-divider />
@@ -53,9 +54,17 @@
           <v-icon>mdi-alphabetical-variant-off</v-icon>
         </v-btn>
 
-        <!-- toggle light/dark mode -->
-        <v-btn icon color="primary">
-          <v-icon>mdi-lightbulb-outline</v-icon>
+        <!-- toggle background opacity -->
+        <v-btn
+          v-if="isBackgroundTransparent"
+          icon
+          color="primary"
+          @click="isBackgroundTransparent = false"
+        >
+          <v-icon>mdi-invert-colors</v-icon>
+        </v-btn>
+        <v-btn v-else icon @click="isBackgroundTransparent = true">
+          <v-icon>mdi-invert-colors-off</v-icon>
         </v-btn>
 
         <!-- downlaod button -->
@@ -89,6 +98,7 @@ export default class App extends Vue {
   port: Runtime.Port | null = null
   otherRatio: number = 15
   isLabelHidden: boolean = false
+  isBackgroundTransparent: boolean = false
   isSliderFocused: boolean = false
   isProcessing: boolean = false
 

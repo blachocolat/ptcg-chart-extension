@@ -1,5 +1,13 @@
 <template>
   <div class="ct-container">
+    <div
+      :class="{
+        'ct-background': true,
+        'ct-background--transparent': transparentBackground,
+      }"
+      data-html2canvas-ignore
+    />
+
     <div id="ct-chart" class="ct-chart" />
 
     <!-- eslint-disable-next-line prettier/prettier -->
@@ -62,6 +70,7 @@ export default class ImagePieChart extends Vue {
   @Prop({ type: Array, default: [] }) chartData!: ImagePieChartData[]
   @Prop({ type: Number, default: 0.15 }) otherRatio!: number
   @Prop({ type: Boolean, default: false }) hideLabel!: boolean
+  @Prop({ type: Boolean, default: false }) transparentBackground!: boolean
   @Prop({ type: Number, default: 1.25 }) scale!: number
   @Prop({ type: Number, default: 0 }) offsetX!: number
   @Prop({ type: Number, default: -20 }) offsetY!: number
@@ -150,7 +159,11 @@ export default class ImagePieChart extends Vue {
 
     // save as PNG
     const element = this.$el as HTMLElement
-    const canvas = await html2canvas(element, { scale: 16 / 9 })
+    const canvas = await html2canvas(element, {
+      scale: 16 / 9,
+      backgroundColor: !this.transparentBackground ? '#ffffff' : null,
+    })
+
     const a = document.createElement('a')
     a.href = canvas.toDataURL('image/png')
     a.download = `デッキ分布図_${this.$dayjs().format('YYYYMMDDHHmmss')}.png`
@@ -269,10 +282,7 @@ export default class ImagePieChart extends Vue {
               `fill: url(#${imageId})`
             )
           } else {
-            context.element._node.setAttribute(
-              'style',
-              `fill: rgba(0, 0, 0, 0.38)`
-            )
+            context.element._node.setAttribute('style', 'fill: #9E9E9E')
           }
         } else if (context.type == 'label') {
           const lines = context.text.split('\n')
@@ -361,25 +371,36 @@ export default class ImagePieChart extends Vue {
   height: 0;
   padding-bottom: 50%;
 
+  .ct-background {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+
+    &.ct-background--transparent {
+      background: url(../../public/transparent-bg.png);
+    }
+  }
+
   .ct-chart {
     position: absolute;
     width: 100%;
     height: 100%;
     top: 0;
   }
-}
 
-.ct-signature {
-  position: absolute;
-  right: 15px;
-  bottom: 10px;
-  font-size: 0.5rem;
-  color: rgba(0, 0, 0, 0.38);
+  .ct-signature {
+    position: absolute;
+    right: 15px;
+    bottom: 10px;
+    font-size: 0.5rem;
+    color: rgba(0, 0, 0, 0.38);
 
-  .v-icon {
-    font-size: 10.5px;
-    color: inherit;
-    vertical-align: inherit;
+    .v-icon {
+      font-size: 10.5px;
+      color: inherit;
+      vertical-align: inherit;
+    }
   }
 }
 </style>
