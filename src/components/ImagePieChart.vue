@@ -10,8 +10,18 @@
 
     <div id="ct-chart" class="ct-chart" />
 
-    <div class="ct-title ct-title--border">{{ title }}</div>
-    <div class="ct-title">{{ title }}</div>
+    <template v-if="chartData.length > 0">
+      <div class="ct-title ct-title--border">{{ title }}</div>
+      <div class="ct-title">{{ title }}</div>
+    </template>
+
+    <div v-else class="ct-message">
+      <v-icon size="128">mdi-emoticon-cry-outline</v-icon>
+      <div class="mt-1">
+        [選択されたカード]&nbsp;に、カードが1枚もありません。<br />
+        [デッキに入れるカードを検索]&nbsp;して、1枚以上選択してください。
+      </div>
+    </div>
 
     <!-- eslint-disable-next-line prettier/prettier -->
     <div class="ct-signature">
@@ -391,6 +401,7 @@ export default class ImagePieChart extends Vue {
 
   .ct-title {
     position: absolute;
+    width: 100%;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -406,6 +417,22 @@ export default class ImagePieChart extends Vue {
       color: #ffffff;
       text-stroke: 3px #ffffff;
       -webkit-text-stroke: 3px #ffffff;
+    }
+  }
+
+  .ct-message {
+    position: absolute;
+    width: 100%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.25em;
+    font-weight: bold;
+    color: rgba(0, 0, 0, 0.38);
+    text-align: center;
+
+    .v-icon {
+      color: inherit;
     }
   }
 

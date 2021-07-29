@@ -123,7 +123,7 @@
         <v-btn
           depressed
           color="primary"
-          :disabled="isProcessing"
+          :disabled="chartData.length == 0 || isProcessing"
           :loading="isProcessing"
           @click="onClick"
         >

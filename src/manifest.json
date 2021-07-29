@@ -5,7 +5,6 @@
   "description": "デッキ分布図をつくります。",
   "default_locale": "ja",
   "permissions": [
-    "tabs",
     "https://www.pokemon-card.com/deck/deck.html"
   ],
   "icons": {
