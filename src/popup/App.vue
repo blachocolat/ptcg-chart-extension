@@ -167,7 +167,11 @@ export default class App extends Vue {
     }
   }
 
-  mounted() {
+  created() {
+    // Set the title for the popup window
+    document.title = 'デッキ分布図つくるマシーン'
+
+    // connect to the background and receive data
     this.port = this.$browser.runtime.connect()
     this.port.onMessage.addListener((message: any[]) => {
       this.chartData = message.map((m) => {
