@@ -10,7 +10,8 @@ const showOrHidePageAction = async (tab: Tabs.Tab) => {
   }
 
   if (tab.url && tab.id) {
-    if (tab.url.match(/^https:\/\/www\.pokemon-card\.com\/deck\/deck\.html/)) {
+    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/deck\.html($|#|\?)/
+    if (pattern.test(tab.url)) {
       activeTab = tab
       await browser.pageAction.show(tab.id)
     } else {
@@ -55,6 +56,7 @@ browser.runtime.onInstalled.addListener(async () => {
     id: 'ptcg-chart',
     title: 'デッキ分布図を作成',
     contexts: ['page'],
+    documentUrlPatterns: ['https://www.pokemon-card.com/deck/deck.html'],
   })
 
   const [currentTab] = await browser.tabs.query({
