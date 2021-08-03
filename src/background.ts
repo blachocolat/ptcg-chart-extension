@@ -1,7 +1,93 @@
-import { browser, Tabs } from 'webextension-polyfill-ts'
+import { browser, Runtime, Tabs } from 'webextension-polyfill-ts'
 import dayjs from 'dayjs'
 
 let activeTab: Tabs.Tab | null = null
+let activePort: Runtime.Port | null = null
+
+const injectElementCode = `
+  Array.from(document.querySelectorAll('#cardImagesView > div > div > table > tbody'))
+    .forEach((el) => {
+      // do nothing if elements have been already injected
+      if (el.querySelector('tr:last-child > td > input[type=text]')) {
+        return
+      }
+      const imageEl = el.querySelector('tr.imgBlockArea > td > a > img');
+      const trEl = document.createElement('tr');
+      const tdEl = document.createElement('td');
+      tdEl.setAttribute('colspan', 2);
+      const inputEl = document.createElement('input');
+      inputEl.type = 'text';
+      inputEl.value = imageEl.alt.replace(/&amp;/g, '&');
+      inputEl.style['width'] = '100%';
+      inputEl.style['padding'] = '3px 6px';
+      inputEl.style['box-sizing'] = 'border-box';
+      inputEl.style['border'] = 'solid 2px #ddd';
+      inputEl.style['background-color'] = '#fff';
+      inputEl.style['border-radius'] = '4px';
+      inputEl.oninput = () => {
+        // update global variable
+        const imageId = imageEl.id.replace(/^img_([0-9]+)$/, '$1')
+        const scriptEl = document.createElement('script');
+        scriptEl.append(\`
+          PCGDECK.searchItemNameAlt[\${imageId}] = '\${inputEl.value}';
+        \`);
+        document.body.append(scriptEl);
+        scriptEl.remove();
+        // update alt in editing
+        imageEl.alt = inputEl.value;
+      }
+      tdEl.append(inputEl);
+      trEl.append(tdEl);
+      el.append(trEl);
+    });
+`
+const injectObserverCode = `
+  if (typeof globalObserver === 'undefined') {
+    // global define
+    globalObserver = new MutationObserver((mutations) => {
+      ${injectElementCode}
+    })
+    globalObserver.observe(
+      document.querySelector('#cardImagesView'),
+      { childList: true }
+    )
+  }
+`
+
+const injectObserver = async () => {
+  await browser.tabs
+    .executeScript(activeTab?.id, { code: injectObserverCode })
+    .catch((e) => console.error(e))
+}
+
+const injectElement = async () => {
+  await browser.tabs
+    .executeScript(activeTab?.id, { code: injectElementCode })
+    .catch((e) => console.error(e))
+}
+
+const fetchCards = async () => {
+  const response = await browser.tabs
+    .executeScript(activeTab?.id, {
+      code: `
+        Array.from(document.querySelectorAll('#cardImagesView > div > div > table > tbody'))
+          .map((el) => {
+            const imageEl = el.querySelector('tr.imgBlockArea > td > a > img');
+            const countEl = el.querySelector('tr:nth-child(3) > td.cPos.nowrap > span > span');
+            return {
+              name: imageEl.alt,
+              imageSrc: imageEl.src,
+              count: parseInt(countEl?.innerText),
+            }
+          })
+          .filter((data) => data.count > 0)
+      `,
+    })
+    .catch((e) => console.error(e))
+  if (response != null) {
+    activePort?.postMessage(response[0])
+  }
+}
 
 const showOrHidePageAction = async (tab: Tabs.Tab) => {
   const window = await browser.windows.get(tab.windowId!)
@@ -13,6 +99,8 @@ const showOrHidePageAction = async (tab: Tabs.Tab) => {
     const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/deck\.html($|#|\?)/
     if (pattern.test(tab.url)) {
       activeTab = tab
+      injectElement()
+      injectObserver()
       await browser.pageAction.show(tab.id)
     } else {
       await browser.pageAction.hide(tab.id)
@@ -32,16 +120,10 @@ browser.tabs.onCreated.addListener(async (tab) => {
 })
 
 browser.runtime.onConnect.addListener(async (port) => {
-  const response = await browser.tabs
-    .executeScript(activeTab?.id, {
-      code: `Array.from(document.querySelectorAll('#cardImagesView > div > div > table > tbody')).map((el) => { const imageEl = el.querySelector('tr.imgBlockArea > td > a > img'); countEl = el.querySelector('tr:nth-child(3) > td.cPos.nowrap > span > span'); return { name: imageEl.alt, imageSrc: imageEl.src, count: parseInt(countEl?.innerText) } }).filter((data) => data.count > 0)`,
-    })
-    .catch((e) => console.error(e))
-  if (response != null) {
-    port.postMessage(response[0])
-  }
+  activePort = port
+  fetchCards()
 
-  port.onMessage.addListener((message) => {
+  activePort.onMessage.addListener((message) => {
     // save in background to avoid quiting the popup
     const a = document.createElement('a')
     a.href = message
@@ -71,9 +153,9 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
   const [existingTab] = await browser.tabs.query({ url: popupURL })
 
   if (existingTab) {
-    // reload the existing tab and bring it to front
-    await browser.tabs.reload(existingTab.id!)
+    // bring the existing tab to front and reload it
     await browser.windows.update(existingTab.windowId!, { focused: true })
+    await fetchCards()
   } else {
     // create a new tab and window
     const newTab = await browser.tabs.create({ url: popupURL, active: false })
