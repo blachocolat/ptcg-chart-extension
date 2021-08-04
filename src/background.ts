@@ -12,6 +12,43 @@ const injectElementCode = `
         return
       }
       const imageEl = el.querySelector('tr.imgBlockArea > td > a > img');
+      {
+        const countEl = el.querySelector('tr > td.cPos.nowrap > span');
+        if (countEl?.querySelector('span')) {
+          const inputEl = document.createElement('input');
+          inputEl.type = 'text';
+          inputEl.pattern = '^[0-9]+$';
+          inputEl.value = parseInt(countEl.innerText, 10);
+          inputEl.style['width'] = 'calc(100% - 56px)';
+          inputEl.style['margin-right'] = '4px';
+          inputEl.style['padding'] = '3px 6px';
+          inputEl.style['box-sizing'] = 'border-box';
+          inputEl.style['border'] = 'solid 2px #ddd';
+          inputEl.style['background-color'] = '#fff';
+          inputEl.style['border-radius'] = '4px';
+          inputEl.oninput = () => {
+            // allow only half-width numbers
+            inputEl.value = inputEl.value
+              .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 65248))
+              .replace(/[^0-9]/g, '');
+
+            // update global variable
+            const [_, deckType, imageId] =
+              countEl.querySelector('a').getAttribute('onclick').match(/^javascript:PCGDECK\\.cardCntChange\\('(deck_[^']+)', '([0-9]+)', 1\\); return false;$/);
+            const scriptEl = document.createElement('script');
+            scriptEl.append(\`
+              PCGDECK.cardCntSet("\${deckType}", \${imageId}, \${parseInt(inputEl.value, 10) || 0});
+              $("#cardCntImagesArea").text("現在のデッキ内には "+PCGDECK.cardViewCnt+" 枚のカードが選択されています");
+              $("#cardCntImagesArea").append($("<div />").text("削除したカードは「調整用カード」枠に入ります ").addClass("Text-annotation"));
+            \`);
+            document.body.append(scriptEl);
+            scriptEl.remove();
+          }
+          countEl.prepend(inputEl);
+          countEl.querySelector('span').remove();
+          countEl.querySelector('br').remove();
+        }
+      }
       const trEl = document.createElement('tr');
       const tdEl = document.createElement('td');
       tdEl.setAttribute('colspan', 2);
@@ -29,7 +66,7 @@ const injectElementCode = `
         const imageId = imageEl.id.replace(/^img_([0-9]+)$/, '$1')
         const scriptEl = document.createElement('script');
         scriptEl.append(\`
-          PCGDECK.searchItemNameAlt[\${imageId}] = '\${inputEl.value}';
+          PCGDECK.searchItemNameAlt[\${imageId}] = "\${inputEl.value}";
         \`);
         document.body.append(scriptEl);
         scriptEl.remove();
@@ -40,6 +77,17 @@ const injectElementCode = `
       trEl.append(tdEl);
       el.append(trEl);
     });
+
+    if (typeof globalScriptEl === 'undefined') {
+      // update global variable
+      globalScriptEl = document.createElement('script');
+      globalScriptEl.append(\`
+        PCGDECK.cardCntChange=function(f,e,k){var l=$("#"+f).val();if(l!=""){var h=l.split("-");var i=h.length;var g=[];for(ii=0;ii<i;ii++){var j=h[ii].split("_");if(j[0]==e){j[1]=parseInt(j[1],10)+k;if(j[1]<=0){j[1]=0}g.push(j.join("_"));PCGDECK.errorItemClear(j[0])}else{g.push(h[ii])}}$("#"+f).val(g.join("-"));PCGDECK.cardTableViewCall(1)}return false};
+        PCGDECK.cardCntSet=function(f,e,k){var l=$("#"+f).val();if(l!=""){var h=l.split("-");var i=h.length;var g=[];for(ii=0;ii<i;ii++){var j=h[ii].split("_");if(j[0]==e){m=parseInt(j[1],10);j[1]=k;if(j[1]<=0){j[1]=0}PCGDECK.cardViewCnt+=j[1]-m;g.push(j.join("_"));PCGDECK.errorItemClear(j[0])}else{g.push(h[ii])}}$("#"+f).val(g.join("-"));}return false};
+      \`);
+      document.body.append(globalScriptEl);
+      globalScriptEl.remove();
+    }
 `
 const injectObserverCode = `
   if (typeof globalObserver === 'undefined') {
@@ -74,10 +122,11 @@ const fetchCards = async () => {
           .map((el) => {
             const imageEl = el.querySelector('tr.imgBlockArea > td > a > img');
             const countEl = el.querySelector('tr > td.cPos.nowrap > span');
+            const inputEl = countEl?.querySelector('input[type="text"]')
             return {
               name: imageEl.alt,
               imageSrc: imageEl.src,
-              count: parseInt(countEl?.innerText),
+              count: parseInt(inputEl?.value || countEl?.innerText, 10),
             }
           })
           .filter((data) => data.count > 0)
@@ -96,7 +145,7 @@ const showOrHidePageAction = async (tab: Tabs.Tab) => {
   }
 
   if (tab.url && tab.id) {
-    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6})?|result.html\/deckID\/[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}\/)$/
+    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6})?|result.html\/deckID\/[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6}\/)$/
     if (pattern.test(tab.url)) {
       activeTab = tab
       injectElement()
