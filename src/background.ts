@@ -73,7 +73,7 @@ const fetchCards = async () => {
         Array.from(document.querySelectorAll('#cardImagesView > div > div > table > tbody'))
           .map((el) => {
             const imageEl = el.querySelector('tr.imgBlockArea > td > a > img');
-            const countEl = el.querySelector('tr:nth-child(3) > td.cPos.nowrap > span > span');
+            const countEl = el.querySelector('tr > td.cPos.nowrap > span');
             return {
               name: imageEl.alt,
               imageSrc: imageEl.src,
@@ -96,7 +96,7 @@ const showOrHidePageAction = async (tab: Tabs.Tab) => {
   }
 
   if (tab.url && tab.id) {
-    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/deck\.html($|#|\?)/
+    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6})?|result.html\/deckID\/[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}\/?)$/
     if (pattern.test(tab.url)) {
       activeTab = tab
       injectElement()
@@ -138,7 +138,10 @@ browser.runtime.onInstalled.addListener(async () => {
     id: 'ptcg-chart',
     title: 'デッキ分布図を作成',
     contexts: ['page'],
-    documentUrlPatterns: ['https://www.pokemon-card.com/deck/deck.html'],
+    documentUrlPatterns: [
+      'https://www.pokemon-card.com/deck/deck.html',
+      'https://www.pokemon-card.com/deck/result.html/deckID/*',
+    ],
   })
 
   const [currentTab] = await browser.tabs.query({
