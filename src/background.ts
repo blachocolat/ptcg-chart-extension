@@ -96,7 +96,7 @@ const showOrHidePageAction = async (tab: Tabs.Tab) => {
   }
 
   if (tab.url && tab.id) {
-    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6})?|result.html\/deckID\/[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}\/?)$/
+    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6})?|result.html\/deckID\/[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}-[0-9a-zA-Z]{6}\/)$/
     if (pattern.test(tab.url)) {
       activeTab = tab
       injectElement()
@@ -140,7 +140,8 @@ browser.runtime.onInstalled.addListener(async () => {
     contexts: ['page'],
     documentUrlPatterns: [
       'https://www.pokemon-card.com/deck/deck.html',
-      'https://www.pokemon-card.com/deck/result.html/deckID/*',
+      'https://www.pokemon-card.com/deck/deck.html?deckID=*',
+      'https://www.pokemon-card.com/deck/result.html/deckID/*/',
     ],
   })
 
