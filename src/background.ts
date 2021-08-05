@@ -34,10 +34,11 @@ const injectElementCode = `
 
             // update global variable
             const [_, deckType, imageId] =
-              countEl.querySelector('a').getAttribute('onclick').match(/^javascript:PCGDECK\\.cardCntChange\\('(deck_[^']+)', '([0-9]+)', 1\\); return false;$/);
+              countEl.querySelector('a').getAttribute('onclick').match(/^javascript:PCGDECK\\.cardCntChange\\('(deck_[^']+)', '([0-9]+)', [0-9]\\); return false;$/);
             const scriptEl = document.createElement('script');
             scriptEl.append(\`
               PCGDECK.cardCntSet("\${deckType}", \${imageId}, \${parseInt(inputEl.value, 10) || 0});
+              PCGDECK.setCookieCall("\${deckType}");
               $("#cardCntImagesArea").text("現在のデッキ内には "+PCGDECK.cardViewCnt+" 枚のカードが選択されています");
               $("#cardCntImagesArea").append($("<div />").text("削除したカードは「調整用カード」枠に入ります ").addClass("Text-annotation"));
             \`);
@@ -148,8 +149,8 @@ const showOrHidePageAction = async (tab: Tabs.Tab) => {
     const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6})?|result.html\/deckID\/[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6}\/)$/
     if (pattern.test(tab.url)) {
       activeTab = tab
-      injectElement()
-      injectObserver()
+      await injectElement()
+      await injectObserver()
       await browser.pageAction.show(tab.id)
     } else {
       await browser.pageAction.hide(tab.id)
@@ -170,7 +171,7 @@ browser.tabs.onCreated.addListener(async (tab) => {
 
 browser.runtime.onConnect.addListener(async (port) => {
   activePort = port
-  fetchCards()
+  await fetchCards()
 
   activePort.onMessage.addListener((message) => {
     // save in background to avoid quiting the popup

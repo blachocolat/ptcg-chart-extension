@@ -145,7 +145,9 @@ export default class ImagePieChart extends Vue {
             ? this.chartistData.series.reduce((a, b) => a + b)
             : 0
         const ratio = (this.chartistData.series[index] / total) * 100
-        return `${label}\n${ratio.toFixed(1)}%`
+        return typeof label == 'string'
+          ? `${label}\n${ratio.toFixed(1)}%`
+          : `${ratio.toFixed(1)}%`
       },
     }
   }
