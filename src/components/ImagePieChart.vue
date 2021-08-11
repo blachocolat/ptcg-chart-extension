@@ -44,9 +44,9 @@ export type ImagePieChartData = {
 }
 
 interface IChartistImagePieChartData extends Chartist.IChartistData {
-  labels?: Array<string>
-  series: Array<number>
-  imageSrcs: Array<string | undefined>
+  labels?: string[]
+  series: number[]
+  imageSrcs: (string | undefined)[]
 }
 
 interface IChartistImagePieChart extends Chartist.IChartistPieChart {
@@ -96,10 +96,9 @@ export default class ImagePieChart extends Vue {
     this.chartData.sort((a, b) => {
       return b.value - a.value // order by value desc
     })
-    const total =
-      this.chartData.length > 0
-        ? this.chartData.map((data) => data.value).reduce((a, b) => a + b)
-        : 0
+    const total = this.chartData
+      .map((data) => data.value)
+      .reduce((a, b) => a + b, 0)
     let subTotal = 0
     let minValue = 0
 
@@ -113,10 +112,9 @@ export default class ImagePieChart extends Vue {
 
     const filteredData = this.chartData.filter((data) => data.value > minValue)
     if (filteredData.length < this.chartData.length) {
-      const filteredTotal =
-        filteredData.length > 0
-          ? filteredData.map((data) => data.value).reduce((a, b) => a + b)
-          : 0
+      const filteredTotal = filteredData
+        .map((data) => data.value)
+        .reduce((a, b) => a + b, 0)
       filteredData.push({
         label: 'その他',
         value: total - filteredTotal,
@@ -140,10 +138,7 @@ export default class ImagePieChart extends Vue {
       labelDirection: 'explode',
       showLabel: !this.hideLabel,
       labelInterpolationFnc: (label: string | number, index: number) => {
-        const total =
-          this.chartistData.series.length > 0
-            ? this.chartistData.series.reduce((a, b) => a + b)
-            : 0
+        const total = this.chartistData.series.reduce((a, b) => a + b, 0)
         const ratio = (this.chartistData.series[index] / total) * 100
         return typeof label == 'string'
           ? `${label}\n${ratio.toFixed(1)}%`

@@ -4,10 +4,10 @@
       <image-pie-chart
         ref="pieChart"
         :chart-data="chartData"
-        :title="title"
-        :other-ratio="otherRatio / 100"
-        :hide-label="isLabelHidden"
-        :transparent-background="isBackgroundTransparent"
+        :title="options.title"
+        :other-ratio="options.otherRatio / 100"
+        :hide-label="options.label == 'hidden'"
+        :transparent-background="options.background == 'transparent'"
       />
 
       <v-divider />
@@ -15,7 +15,7 @@
       <v-card-actions>
         <!-- input chart title -->
         <v-textarea
-          v-model="title"
+          v-model="options.title"
           placeholder="大会名など"
           outlined
           rows="1"
@@ -43,7 +43,7 @@
 
         <!-- up/down other ratio -->
         <v-slider
-          v-model="otherRatio"
+          v-model="options.otherRatio"
           dense
           hide-details
           thumb-label
@@ -71,10 +71,10 @@
 
         <!-- toggle show/hide labels -->
         <v-btn
-          v-if="!isLabelHidden"
+          v-if="options.label == 'shown'"
           icon
           color="primary"
-          @click="isLabelHidden = true"
+          @click="options.label = 'hidden'"
         >
           <v-tooltip top>
             <template v-slot:activator="{ on, attrs }">
@@ -85,7 +85,7 @@
             <span>ラベルあり</span>
           </v-tooltip>
         </v-btn>
-        <v-btn v-else icon @click="isLabelHidden = false">
+        <v-btn v-else icon @click="options.label = 'shown'">
           <v-tooltip top>
             <template v-slot:activator="{ on, attrs }">
               <v-icon v-bind="attrs" v-on="on">
@@ -98,10 +98,10 @@
 
         <!-- toggle background opacity -->
         <v-btn
-          v-if="!isBackgroundTransparent"
+          v-if="options.background == 'fill'"
           icon
           color="primary"
-          @click="isBackgroundTransparent = true"
+          @click="options.background = 'transparent'"
         >
           <v-tooltip top>
             <template v-slot:activator="{ on, attrs }">
@@ -110,7 +110,7 @@
             <span>背景色あり</span>
           </v-tooltip>
         </v-btn>
-        <v-btn v-else icon @click="isBackgroundTransparent = false">
+        <v-btn v-else icon @click="options.background = 'fill'">
           <v-tooltip top>
             <template v-slot:activator="{ on, attrs }">
               <v-icon v-bind="attrs" v-on="on">mdi-invert-colors-off</v-icon>
@@ -125,7 +125,7 @@
           color="primary"
           :disabled="chartData.length == 0 || isProcessing"
           :loading="isProcessing"
-          @click="onClick"
+          @click="onClickDownload"
         >
           <v-icon left>mdi-download</v-icon>
           ダウンロード
@@ -136,29 +136,44 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator'
+import { Component, Vue, Watch } from 'vue-property-decorator'
 import { Runtime } from 'webextension-polyfill-ts'
 import ImagePieChart, {
   ImagePieChartData,
 } from '@/components/ImagePieChart.vue'
+
+type ChartOptions = {
+  title?: string
+  otherRatio?: number
+  label?: 'shown' | 'hidden'
+  background?: 'fill' | 'transparent'
+  theme?: 'light' | 'dark'
+}
 
 @Component({
   components: { ImagePieChart },
 })
 export default class App extends Vue {
   chartData: ImagePieChartData[] = []
+  options: ChartOptions = {
+    title: '',
+    otherRatio: 15,
+    label: 'shown',
+    background: 'fill',
+    theme: 'light',
+  }
   port: Runtime.Port | null = null
-
-  title: string = ''
-  otherRatio: number = 15
-  isLabelHidden: boolean = false
-  isBackgroundTransparent: boolean = false
 
   isTextFieldFocused: boolean = false
   isSliderFocused: boolean = false
   isProcessing: boolean = false
 
-  async onClick() {
+  @Watch('options', { deep: true })
+  async onChangeOptions() {
+    await this.$browser.storage.sync.set(this.options)
+  }
+
+  async onClickDownload() {
     if (this.$refs.pieChart instanceof ImagePieChart) {
       this.isProcessing = true
       const dataURL = await this.$refs.pieChart.captureAsPNG()
@@ -167,18 +182,21 @@ export default class App extends Vue {
     }
   }
 
-  created() {
-    // Set the title for the popup window
+  async created() {
+    // set the title for the popup window
     document.title = 'デッキ分布図つくるマシーン'
+
+    // restore options
+    this.options = await this.$browser.storage.sync.get(this.options)
 
     // connect to the background and receive data
     this.port = this.$browser.runtime.connect()
-    this.port.onMessage.addListener((message: any[]) => {
-      this.chartData = message.map((m) => {
+    this.port.onMessage.addListener(async (message: any[]) => {
+      this.chartData = message.map((data) => {
         return {
-          label: m.name.replace(/&amp;/g, '&'),
-          value: m.count,
-          imageSrc: m.imageSrc,
+          label: data.name,
+          value: data.count,
+          imageSrc: data.imageSrc,
         }
       })
     })

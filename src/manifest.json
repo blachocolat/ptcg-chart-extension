@@ -6,6 +6,7 @@
   "default_locale": "ja",
   "permissions": [
     "contextMenus",
+    "storage",
     "tabs",
     "https://www.pokemon-card.com/deck/deck.html",
     "https://www.pokemon-card.com/deck/deck.html?deckID=*",
