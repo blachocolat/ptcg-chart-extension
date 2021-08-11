@@ -18,7 +18,10 @@ const injectElementCode = async () => {
         }
         const imageEl = el.querySelector('tr.imgBlockArea > td > a > img')
         const cardId = parseInt(imageEl.id.replace(/^img_([0-9]+)$/, '$1'), 10)
-        imageEl.alt = globalCardNames[cardId] || imageEl.alt.replace(/&amp;/g, '&')
+        const originCardName = imageEl.alt.replace(/&amp;/g, '&')
+        imageEl.alt = globalCardNames.hasOwnProperty(cardId)
+          ? globalCardNames[cardId]
+          : originCardName
         {
           const countEl = el.querySelector('tr > td.cPos.nowrap > span')
           if (countEl?.querySelector('span')) {
@@ -61,8 +64,10 @@ const injectElementCode = async () => {
         tdEl.setAttribute('colspan', 2)
         const inputEl = document.createElement('input')
         inputEl.type = 'text'
-        inputEl.value = globalCardNames[cardId] || imageEl.alt.replace(/&amp;/g, '&')
-        inputEl.placeholder = imageEl.alt.replace(/&amp;/g, '&')
+        inputEl.value = globalCardNames.hasOwnProperty(cardId)
+          ? globalCardNames[cardId]
+          : originCardName
+        inputEl.placeholder = originCardName
         inputEl.style['width'] = '100%'
         inputEl.style['padding'] = '3px 6px'
         inputEl.style['box-sizing'] = 'border-box'
@@ -139,7 +144,7 @@ const fetchCards = async () => {
               id: cardId,
               name: imageEl.alt,
               imageSrc: imageEl.src,
-              count: parseInt(inputEl?.value || countEl?.innerText, 10),
+              count: parseInt(inputEl?.value || countEl?.innerText, 10) || 0,
             }
           })
           .filter((data) => data.count > 0)
