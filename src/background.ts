@@ -2,7 +2,7 @@ import { browser, Runtime, Tabs } from 'webextension-polyfill-ts'
 import dayjs from 'dayjs'
 
 let activeTab: Tabs.Tab | null = null
-let activePort: Runtime.Port | null = null
+let activePorts: Runtime.Port[] = []
 
 const injectElementCode = `
   Array.from(document.querySelectorAll('#cardImagesView > div > div > table > tbody'))
@@ -38,7 +38,6 @@ const injectElementCode = `
             const scriptEl = document.createElement('script');
             scriptEl.append(\`
               PCGDECK.cardCntSet("\${deckType}", \${imageId}, \${parseInt(inputEl.value, 10) || 0});
-              PCGDECK.setCookieCall("\${deckType}");
               $("#cardCntImagesArea").text("現在のデッキ内には "+PCGDECK.cardViewCnt+" 枚のカードが選択されています");
               $("#cardCntImagesArea").append($("<div />").text("削除したカードは「調整用カード」枠に入ります ").addClass("Text-annotation"));
             \`);
@@ -84,7 +83,7 @@ const injectElementCode = `
       globalScriptEl = document.createElement('script');
       globalScriptEl.append(\`
         PCGDECK.cardCntChange=function(f,e,k){var l=$("#"+f).val();if(l!=""){var h=l.split("-");var i=h.length;var g=[];for(ii=0;ii<i;ii++){var j=h[ii].split("_");if(j[0]==e){j[1]=parseInt(j[1],10)+k;if(j[1]<=0){j[1]=0}g.push(j.join("_"));PCGDECK.errorItemClear(j[0])}else{g.push(h[ii])}}$("#"+f).val(g.join("-"));PCGDECK.cardTableViewCall(1)}return false};
-        PCGDECK.cardCntSet=function(f,e,k){var l=$("#"+f).val();if(l!=""){var h=l.split("-");var i=h.length;var g=[];for(ii=0;ii<i;ii++){var j=h[ii].split("_");if(j[0]==e){m=parseInt(j[1],10);j[1]=k;if(j[1]<=0){j[1]=0}PCGDECK.cardViewCnt+=j[1]-m;g.push(j.join("_"));PCGDECK.errorItemClear(j[0])}else{g.push(h[ii])}}$("#"+f).val(g.join("-"));}return false};
+        PCGDECK.cardCntSet=function(f,e,k){var l=$("#"+f).val();if(l!=""){var h=l.split("-");var i=h.length;var g=[];for(ii=0;ii<i;ii++){var j=h[ii].split("_");if(j[0]==e){m=parseInt(j[1],10);j[1]=k;if(j[1]<=0){j[1]=0}PCGDECK.cardViewCnt+=j[1]-m;g.push(j.join("_"));PCGDECK.errorItemClear(j[0])}else{g.push(h[ii])}}$("#"+f).val(g.join("-"));PCGDECK.setCookieCall(f)}return false};
       \`);
       document.body.append(globalScriptEl);
       globalScriptEl.remove();
@@ -135,7 +134,7 @@ const fetchCards = async () => {
     })
     .catch((e) => console.error(e))
   if (response != null) {
-    activePort?.postMessage(response[0])
+    activePorts.forEach((activePort) => activePort.postMessage(response[0]))
   }
 }
 
@@ -146,7 +145,7 @@ const showOrHidePageAction = async (tab: Tabs.Tab) => {
   }
 
   if (tab.url && tab.id) {
-    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6})?|result.html\/deckID\/[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6}\/)$/
+    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6})?|[^.]+.html\/deckID\/[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6}\/?)$/
     if (pattern.test(tab.url)) {
       activeTab = tab
       await injectElement()
@@ -170,10 +169,14 @@ browser.tabs.onCreated.addListener(async (tab) => {
 })
 
 browser.runtime.onConnect.addListener(async (port) => {
-  activePort = port
+  activePorts.push(port)
   await fetchCards()
 
-  activePort.onMessage.addListener((message) => {
+  port.onDisconnect.addListener(() => {
+    activePorts = activePorts.filter((activePort) => activePort != port)
+  })
+
+  port.onMessage.addListener((message) => {
     // save in background to avoid quiting the popup
     const a = document.createElement('a')
     a.href = message
@@ -191,7 +194,7 @@ browser.runtime.onInstalled.addListener(async () => {
     documentUrlPatterns: [
       'https://www.pokemon-card.com/deck/deck.html',
       'https://www.pokemon-card.com/deck/deck.html?deckID=*',
-      'https://www.pokemon-card.com/deck/result.html/deckID/*/',
+      'https://www.pokemon-card.com/deck/*.html/deckID/*',
     ],
   })
 
@@ -199,7 +202,9 @@ browser.runtime.onInstalled.addListener(async () => {
     active: true,
     currentWindow: true,
   })
-  await showOrHidePageAction(currentTab)
+  if (currentTab) {
+    await showOrHidePageAction(currentTab)
+  }
 })
 
 browser.contextMenus.onClicked.addListener(async (info, tab) => {

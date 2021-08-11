@@ -303,7 +303,7 @@ export default class ImagePieChart extends Vue {
           context.element._node.textContent = ''
           context.element._node.setAttribute('x', `${context.x}`)
           context.element._node.setAttribute('y', `${context.y}`)
-          context.element._node.setAttribute('dy', `${1 - lines.length}em`)
+          context.element._node.setAttribute('dy', `${1.5 - lines.length}em`)
           context.element._node.removeAttribute('dx')
 
           lines.forEach((line) => {
