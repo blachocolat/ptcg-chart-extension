@@ -245,12 +245,14 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
   } else {
     // create a new tab and window
     const newTab = await browser.tabs.create({ url: popupURL, active: false })
-    const windowHeight = navigator.platform.startsWith('Win') ? 478 : 445
+    const isWindows = navigator.platform.startsWith('Win')
+    const windowWidth = isWindows ? 734 : 720
+    const windowHeight = isWindows ? 460 : 445
     await browser.windows.create({
       tabId: newTab.id,
       type: 'popup',
       focused: true,
-      width: 720,
+      width: windowWidth,
       height: windowHeight,
     })
   }
