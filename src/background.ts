@@ -23,7 +23,7 @@ const injectElementCode = async () => {
           ? globalCardNames[cardId]
           : originCardName
         {
-          const countEl = el.querySelector('tr > td.cPos.nowrap > span')
+          const countEl = el.querySelector('tr > td.cPos.nowrap > *')
           if (countEl?.querySelector('span')) {
             const inputEl = document.createElement('input')
             inputEl.type = 'text'
@@ -44,7 +44,7 @@ const injectElementCode = async () => {
 
               // update global variable
               const deckType =
-                countEl.querySelector('a').getAttribute('onclick').replace(/^javascript:PCGDECK\\.cardCntChange\\('(deck_[^']+)', '[0-9]+', [0-9]\\); return false;$/, '$1')
+                countEl.querySelector('a').getAttribute('onclick').replace(/^javascript:PCGDECK.cardCntChange\\('(deck_[^']+)', '[0-9]+', -1\\); return false;$/, '$1')
               const scriptEl = document.createElement('script')
               scriptEl.append(\`
                 PCGDECK.cardCntSet("\${deckType}", \${cardId}, \${parseInt(inputEl.value, 10) || 0})
@@ -138,7 +138,7 @@ const fetchCards = async () => {
           .map((el) => {
             const imageEl = el.querySelector('tr.imgBlockArea > td > a > img')
             const cardId = parseInt(imageEl.id.replace(/^img_([0-9]+)$/, '$1'), 10)
-            const countEl = el.querySelector('tr > td.cPos.nowrap > span')
+            const countEl = el.querySelector('tr > td.cPos.nowrap > *')
             const inputEl = countEl?.querySelector('input[type="text"]')
             return {
               id: cardId,
