@@ -132,9 +132,9 @@ export default class ImagePieChart extends Vue {
     return {
       donut: true,
       donutSolid: true,
-      donutWidth: 160 - this.holeRadius,
+      donutWidth: 175 - this.holeRadius,
       chartPadding: 20,
-      labelOffset: 30,
+      labelOffset: 40,
       labelDirection: 'explode',
       showLabel: !this.hideLabel,
       labelInterpolationFnc: (label: string | number, index: number) => {
@@ -160,7 +160,7 @@ export default class ImagePieChart extends Vue {
   @Emit('capture')
   async captureAsPNG() {
     // redraw with dataURL images
-    const promises = this.chartistData.imageSrcs.map(async (url) => {
+    const promises = this.chartistData.imageSrcs.map((url) => {
       return url ? Utils.createDataURL(url) : url
     })
     const dataURLs = await Promise.all(promises)
@@ -210,8 +210,8 @@ export default class ImagePieChart extends Vue {
       this.chartistOptions
     ) as IChartistImagePieChart
 
-    const baseWidth = 320
-    const baseHeight = 447
+    const baseWidth = 360
+    const baseHeight = 503
 
     this.chart.on(
       'draw',
@@ -258,11 +258,11 @@ export default class ImagePieChart extends Vue {
             const height = baseHeight * scale
             const offsetX =
               context.radius * ((minX + maxX) / 2 - (scale - 1)) +
-              200 +
+              180 +
               this.offsetX
             const offsetY =
               context.radius * ((minY + maxY) / 2 - ((maxY - minY) / 2 - 1)) +
-              20 +
+              18 +
               this.offsetY
 
             const svgNS = 'http://www.w3.org/2000/svg'
@@ -377,7 +377,7 @@ export default class ImagePieChart extends Vue {
   position: relative;
   width: 100%;
   height: 0;
-  padding-bottom: 50%;
+  padding-bottom: 56.25%;
 
   .ct-background {
     position: absolute;
