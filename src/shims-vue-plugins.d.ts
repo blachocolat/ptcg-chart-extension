@@ -1,4 +1,4 @@
-import { Browser } from 'webextension-polyfill-ts'
+import { Browser } from 'webextension-polyfill'
 import dayjs from 'dayjs'
 
 declare module 'vue/types/vue' {

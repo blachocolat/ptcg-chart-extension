@@ -1,0 +1,28 @@
+diff --git a/node_modules/vue-cli-plugin-browser-extension/lib/manifest.js b/node_modules/vue-cli-plugin-browser-extension/lib/manifest.js
+index c62792c..29b4799 100644
+--- a/node_modules/vue-cli-plugin-browser-extension/lib/manifest.js
++++ b/node_modules/vue-cli-plugin-browser-extension/lib/manifest.js
+@@ -26,15 +26,20 @@ module.exports = (api, pluginOptions, packageJson) => async (content) => {
+ 
+   syncManifestWithPackageJson(pluginOptions, packageJson, manifest)
+ 
+-  manifest.content_security_policy =
+-    manifest.content_security_policy || "script-src 'self' 'unsafe-eval'; object-src 'self'"
++  // manifest.content_security_policy =
++  //   manifest.content_security_policy || "script-src 'self' 'unsafe-eval'; object-src 'self'"
++  manifest.content_security_policy = {}
++  manifest.content_security_policy.extension_pages =
++    manifest.content_security_policy?.extension_pages || "script-src 'self'; object-src 'self'"
+ 
+   // validate manifest
+ 
+   // If building for production (going to web store) abort early.
+   // The browser extension store will hash your signing key and apply CSP policies.
+   if (isProduction) {
+-    manifest.content_security_policy = manifest.content_security_policy.replace(/'unsafe-eval'/, '')
++    // manifest.content_security_policy = manifest.content_security_policy.replace(/'unsafe-eval'/, '')
++    manifest.content_security_policy.extension_pages =
++      manifest.content_security_policy?.extension_pages.replace(/'unsafe-eval'/, '')
+ 
+     // validate minimum options
+ 

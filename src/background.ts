@@ -1,8 +1,27 @@
-import { browser, Runtime, Tabs } from 'webextension-polyfill-ts'
+import browser, { Runtime, Tabs } from 'webextension-polyfill'
 import dayjs from 'dayjs'
 
 let activeTab: Tabs.Tab | null = null
 let activePorts: Runtime.Port[] = []
+
+const execCodeInPage = async (code: string) => {
+  if (activeTab == null || typeof activeTab.id === 'undefined') {
+    return
+  }
+  return browser.scripting
+    .executeScript({
+      target: { tabId: activeTab.id },
+      func: (code: string) => {
+        const el = document.createElement('script')
+        el.textContent = code
+        document.documentElement.appendChild(el)
+        el.remove()
+      },
+      args: [code],
+      world: 'MAIN',
+    })
+    .catch((e) => console.error(e))
+}
 
 const injectElementCode = async () => {
   const options = await browser.storage.local.get({
@@ -118,28 +137,33 @@ const injectObserverCode = async () => {
   `
 }
 
-const injectObserver = async () => {
-  await browser.tabs
-    .executeScript(activeTab?.id, { code: await injectObserverCode() })
-    .catch((e) => console.error(e))
-}
-
-const injectElement = async () => {
-  await browser.tabs
-    .executeScript(activeTab?.id, { code: await injectElementCode() })
-    .catch((e) => console.error(e))
-}
-
 const fetchCards = async () => {
-  const response = await browser.tabs
-    .executeScript(activeTab?.id, {
-      code: `
-        Array.from(document.querySelectorAll('#cardImagesView > div > div > table > tbody'))
+  if (activeTab == null || typeof activeTab.id === 'undefined') {
+    return
+  }
+  const response = await browser.scripting
+    .executeScript({
+      target: { tabId: activeTab.id },
+      func: () => {
+        return Array.from(
+          document.querySelectorAll(
+            '#cardImagesView > div > div > table > tbody'
+          )
+        )
           .map((el) => {
-            const imageEl = el.querySelector('tr.imgBlockArea > td > a > img')
-            const cardId = parseInt(imageEl.id.replace(/^img_([0-9]+)$/, '$1'), 10)
-            const countEl = el.querySelector('tr > td.cPos.nowrap > *')
-            const inputEl = countEl?.querySelector('input[type="text"]')
+            const imageEl = el.querySelector(
+              'tr.imgBlockArea > td > a > img'
+            ) as HTMLImageElement
+            const cardId = parseInt(
+              imageEl.id.replace(/^img_([0-9]+)$/, '$1'),
+              10
+            )
+            const countEl = el.querySelector(
+              'tr > td.cPos.nowrap > *'
+            ) as HTMLElement
+            const inputEl = countEl?.querySelector(
+              'input[type="text"]'
+            ) as HTMLInputElement
             return {
               id: cardId,
               name: imageEl.alt,
@@ -148,20 +172,26 @@ const fetchCards = async () => {
             }
           })
           .filter((data) => data.count > 0)
-      `,
+      },
+      world: 'MAIN',
     })
     .catch((e) => console.error(e))
-  if (response != null && response.length > 0) {
+
+  if (response != null && response?.length > 0) {
     // save card names into the storage
-    const options = await browser.storage.local.get({
+    const options = (await browser.storage.local.get({
       cardNames: {},
-    })
-    response[0].forEach((data: any) => {
+    })) as { cardNames: string[] }
+    const datas = response[0].result as { id: number; name: string }[]
+
+    datas.forEach((data) => {
       options.cardNames[data.id] = data.name
     })
     await browser.storage.local.set(options)
 
-    activePorts.forEach((activePort) => activePort.postMessage(response[0]))
+    activePorts.forEach((activePort) => {
+      activePort.postMessage(datas)
+    })
   }
 }
 
@@ -172,14 +202,15 @@ const showOrHidePageAction = async (tab: Tabs.Tab) => {
   }
 
   if (tab.url && tab.id) {
-    const pattern = /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6})?|[^.]+.html\/deckID\/[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6}\/?)$/
+    const pattern =
+      /^https:\/\/www\.pokemon-card\.com\/deck\/(deck.html(\?deckID=[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6})?|[^.]+.html\/deckID\/[0-9A-Za-z]{6}-[0-9A-Za-z]{6}-[0-9A-Za-z]{6}\/?)$/
     if (pattern.test(tab.url)) {
       activeTab = tab
-      await injectElement()
-      await injectObserver()
-      await browser.pageAction.show(tab.id)
+      await execCodeInPage(await injectElementCode())
+      await execCodeInPage(await injectObserverCode())
+      await browser.action.enable(tab.id)
     } else {
-      await browser.pageAction.hide(tab.id)
+      await browser.action.disable(tab.id)
     }
   }
 }
@@ -205,11 +236,10 @@ browser.runtime.onConnect.addListener(async (port) => {
 
   port.onMessage.addListener((message) => {
     // save in background to avoid quiting the popup
-    const a = document.createElement('a')
-    a.href = message
-    a.download = `デッキ分布図_${dayjs().format('YYYYMMDDHHmmss')}.png`
-    a.click()
-    a.remove()
+    browser.downloads.download({
+      filename: `デッキ分布図_${dayjs().format('YYYYMMDDHHmmss')}.png`,
+      url: message as string,
+    })
   })
 })
 
@@ -235,7 +265,7 @@ browser.runtime.onInstalled.addListener(async () => {
 })
 
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
-  const popupURL = browser.extension.getURL('popup.html')
+  const popupURL = browser.runtime.getURL('popup.html')
   const [existingTab] = await browser.tabs.query({ url: popupURL })
 
   if (existingTab) {
@@ -247,7 +277,7 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
     const newTab = await browser.tabs.create({ url: popupURL, active: false })
     const isWindows = navigator.platform.startsWith('Win')
     const windowWidth = isWindows ? 734 : 720
-    const windowHeight = isWindows ? 460 : 445
+    const windowHeight = isWindows ? 460 : 468 + 22
     await browser.windows.create({
       tabId: newTab.id,
       type: 'popup',

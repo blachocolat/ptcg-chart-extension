@@ -137,7 +137,7 @@
 
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-property-decorator'
-import { Runtime } from 'webextension-polyfill-ts'
+import { Runtime } from 'webextension-polyfill'
 import ImagePieChart, {
   ImagePieChartData,
 } from '@/components/ImagePieChart.vue'
@@ -191,7 +191,10 @@ export default class App extends Vue {
 
     // connect to the background and receive data
     this.port = this.$browser.runtime.connect()
-    this.port.onMessage.addListener(async (message: any[]) => {
+    this.port.onMessage.addListener(async (message) => {
+      if (!Array.isArray(message)) {
+        return
+      }
       this.chartData = message.map((data) => {
         return {
           label: data.name,

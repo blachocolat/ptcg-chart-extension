@@ -1,13 +1,17 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "__MSG_extName__",
   "homepage_url": "https://chrome.google.com/webstore/detail/dfljbdbkgkhcpmjgbjfegdnlembkkcol",
   "description": "デッキ分布図をつくります。",
   "default_locale": "ja",
   "permissions": [
     "contextMenus",
+    "downloads",
+    "scripting",
     "storage",
-    "tabs",
+    "tabs"
+  ],
+  "host_permissions": [
     "https://www.pokemon-card.com/deck/deck.html",
     "https://www.pokemon-card.com/deck/deck.html?deckID=*",
     "https://www.pokemon-card.com/deck/*.html/deckID/*"
@@ -18,12 +22,10 @@
     "128": "icons/128.png"
   },
   "background": {
-    "scripts": [
-      "js/background.js"
-    ],
-    "persistent": false
+    "service_worker": "js/background.js",
+    "type": "module"
   },
-  "page_action": {
+  "action": {
     "default_popup": "popup.html",
     "default_title": "__MSG_extName__",
     "default_icon": {
