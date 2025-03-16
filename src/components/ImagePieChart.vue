@@ -85,9 +85,9 @@ export default class ImagePieChart extends Vue {
   @Prop({ type: Number, default: 0.15 }) otherRatio!: number
   @Prop({ type: Boolean, default: false }) hideLabel!: boolean
   @Prop({ type: Boolean, default: false }) transparentBackground!: boolean
-  @Prop({ type: Number, default: 1.25 }) scale!: number
-  @Prop({ type: Number, default: 0 }) offsetX!: number
-  @Prop({ type: Number, default: -20 }) offsetY!: number
+  @Prop({ type: Number, default: 1.5 }) scale!: number
+  @Prop({ type: Number, default: 180 }) offsetX!: number
+  @Prop({ type: Number, default: 30 }) offsetY!: number
   @Prop({ type: Number, default: 60 }) holeRadius!: number
 
   private chart!: IChartistImagePieChart
@@ -210,8 +210,8 @@ export default class ImagePieChart extends Vue {
       this.chartistOptions
     ) as IChartistImagePieChart
 
-    const baseWidth = 360
-    const baseHeight = 503
+    const baseWidth = 360 // 63 x 5.714
+    const baseHeight = 503 // 88 x 5.714
 
     this.chart.on(
       'draw',
@@ -225,7 +225,6 @@ export default class ImagePieChart extends Vue {
             const angleList = [
               context.startAngle,
               context.endAngle,
-              0,
               90,
               180,
               270,
@@ -235,6 +234,8 @@ export default class ImagePieChart extends Vue {
             let maxX = -Number.MAX_VALUE
             let maxY = -Number.MAX_VALUE
 
+            // calculate the ideal position (as in the unit circle)
+            const holeRatio = this.holeRadius / context.radius
             for (const angle of angleList) {
               if (angle < context.startAngle) {
                 continue
@@ -245,25 +246,32 @@ export default class ImagePieChart extends Vue {
 
               const outerX = Math.sin(angle * (Math.PI / 180))
               const outerY = -Math.cos(angle * (Math.PI / 180))
-              const innerX = outerX * (this.holeRadius / context.radius)
-              const innerY = outerY * (this.holeRadius / context.radius)
+              const innerX = outerX * holeRatio
+              const innerY = outerY * holeRatio
               minX = Math.min(minX, innerX, outerX)
               minY = Math.min(minY, innerY, outerY)
               maxX = Math.max(maxX, innerX, outerX)
               maxY = Math.max(maxY, innerY, outerY)
             }
 
+            // calculate the center of gravity
+            const offsetTheta =
+              ((context.startAngle + context.endAngle) / 2) * (Math.PI / 180)
+            const theta =
+              ((context.endAngle - context.startAngle) / 2) * (Math.PI / 180)
+            const gravityRatio =
+              (2 * (1 + holeRatio + holeRatio * holeRatio) * Math.sin(theta)) /
+              (3 * (1 + holeRatio) * theta)
+            const gravityX = gravityRatio * Math.sin(offsetTheta)
+            const gravityY = gravityRatio * -Math.cos(offsetTheta)
+
             const scale = (Math.max(maxX - minX, maxY - minY) / 2) * this.scale
             const width = baseWidth * scale
             const height = baseHeight * scale
             const offsetX =
-              context.radius * ((minX + maxX) / 2 - (scale - 1)) +
-              180 +
-              this.offsetX
+              context.radius * (gravityX - (scale - 1)) + this.offsetX
             const offsetY =
-              context.radius * ((minY + maxY) / 2 - ((maxY - minY) / 2 - 1)) +
-              18 +
-              this.offsetY
+              context.radius * (gravityY - (scale - 1)) + this.offsetY
 
             const svgNS = 'http://www.w3.org/2000/svg'
             const defs = document.createElementNS(svgNS, 'defs')
